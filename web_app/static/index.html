@@ -752,12 +752,12 @@
             <table id="resultsTable">
                 <thead>
                     <tr>
-                        <th style="width: 160px;">IMEI</th>
-                        <th style="width: 170px;">Номер локатора (ID)</th>
-                        <th style="width: 110px;">PIN-код</th>
-                        <th style="width: 100px;">Статус</th>
-                        <th>Дата регистрации</th>
-                        <th>Тип / Примечание</th>
+                        <th style="width: 150px;">IMEI</th>
+                        <th style="width: 150px;">Номер локатора (ID)</th>
+                        <th style="width: 90px;">PIN-код</th>
+                        <th style="width: 90px;">Статус</th>
+                        <th style="width: 190px;">Группа Flespi</th>
+                        <th>Дата / Примечание</th>
                     </tr>
                 </thead>
                 <tbody id="resultsTableBody">
@@ -1033,7 +1033,7 @@
 
         try {
             progressBar.style.width = '60%';
-            progressText.innerHTML = '<div class="spinner"></div><span>[2/3] Документ принят. Ожидание ответа PUESC (ZSL_121 / ZSL_123)...</span>';
+            progressText.innerHTML = '<div class="spinner"></div><span>[2/3] Документ принят. Регистрация в PUESC и синхронизация групп Flespi...</span>';
 
             const response = await fetch('/api/register', {
                 method: 'POST',
@@ -1051,11 +1051,11 @@
                 return;
             }
 
-            progressText.innerHTML = '<span>✅ Готово! Результаты получены.</span>';
+            progressText.innerHTML = '<span>✅ Готово! Результаты получены и группы Flespi обновлены.</span>';
             setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
             renderResults(data);
             loadHistory();
-            showToast('Регистрация успешно выполнена!');
+            showToast('Регистрация и синхронизация с Flespi выполнены!');
         } catch (err) {
             progressBox.style.display = 'none';
             showToast(`Сетевая ошибка: ${err.message}`, true);
@@ -1134,6 +1134,10 @@
                 ? `<span style="color: #60a5fa; font-weight: 500;">(Ранее в базе)</span>`
                 : (r.success ? `<span style="color: #34d399; font-weight: 500;">(Новая регистрация)</span>` : `<span style="color: #f87171;">${r.error || 'Ошибка'}</span>`);
 
+            const flespiHtml = r.flespi_group 
+                ? `<span style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">📁 ${r.flespi_group}</span>`
+                : `<span style="color: var(--text-dim);">-</span>`;
+
             tr.innerHTML = `
                 <td style="font-weight: 600;">${r.imei}</td>
                 <td>
@@ -1145,7 +1149,7 @@
                     ${r.locPin && r.locPin !== '-' ? `<button class="copy-btn" onclick="copyToClipboard('${r.locPin}')">📋</button>` : ''}
                 </td>
                 <td><span class="badge-status-0">0 Активен</span></td>
-                <td style="font-size: 12px; color: var(--text-muted);">${r.created || '-'}</td>
+                <td>${flespiHtml}</td>
                 <td>${noteHtml}</td>
             `;
             tbody.appendChild(tr);

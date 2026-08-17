@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 from aiohttp import web
 
 # ==============================================================================
-# --- НАСТРОЙКИ PUESC ---
+# --- НАСТРОЙКИ PUESC & FLESPI ---
 # ==============================================================================
 
 PUESC_URL = "https://ws.puesc.gov.pl/seap_wsChannel/DocumentHandlingPort"
@@ -31,6 +31,19 @@ RESPONSE_URL = "https://device-etoll.atkgps.pl/DocumentHandlingSvc"
 RESPONSE_USERNAME = "zam@atk-gps.by"
 RESPONSE_PASSWORD = "HFxqCHa6eC-+47x"
 RESPONSE_CERT_FINGERPRINT = "91f371717516763d8fd3d60091877e23059d90ce"
+
+# Flespi API
+FLESPI_TOKEN = "BNwhrmoKyFAqUVKfGbcltAcX3kXAq5fmnxY5SzqduN4Pa0R4BUSVaoKsJOKu8IOJ"
+FLESPI_BASE_URL = "https://flespi.io/gw"
+
+FLESPI_GROUPS = {
+    "motoguard_etoll": 247707,         # MotoGuard e-toll
+    "overseer_etoll": 278414,          # Overseer e-toll
+    "overseer_sent": 278415,           # Overseer sent
+    "overseer_sent_etoll": 278416,     # Overseer sent+e-toll
+    "motoguard_to_delete": 299554,     # MotoGuard to delete
+    "overseer_to_delete": 305528,      # Overseer to delete
+}
 
 BASE_DIR = Path(__file__).resolve().parent
 REPORTS_DIR = BASE_DIR / "reports"
@@ -73,6 +86,127 @@ def get_daily_run_index(target_dir: Path, tag: str) -> int:
     return max_idx + 1
 
 
+# ==============================================================================
+# --- FLESPI ИНТЕГРАЦИЯ ---
+# ==============================================================================
+
+def get_or_create_flespi_device(imei: str, contractor: str):
+    """
+    Находит существующее устройство в Flespi по IMEI или создает новое.
+    Возвращает: (device_id, device_name)
+    """
+    clean_c = contractor.strip().lower()
+    headers = {
+        "Authorization": f"FlespiToken {FLESPI_TOKEN}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    # 1. Поиск по ident (IMEI)
+    search_url = f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={imei}"
+    req = urllib.request.Request(search_url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("result", [])
+            if results:
+                return results[0]["id"], results[0].get("name", "")
+    except Exception:
+        pass
+
+    # 2. Создание, если устройства нет
+    if "overseer" in clean_c:
+        name = f"overseer {imei}"
+        dev_type = 14
+        config = {"ident": imei}
+    else:
+        name = f"Motoguard {imei}"
+        dev_type = 22
+        config = {"ident": imei, "settings_polling": "once"}
+
+    payload = [{
+        "name": name,
+        "device_type_id": dev_type,
+        "messages_ttl": 1209600,
+        "configuration": config,
+    }]
+
+    create_req = urllib.request.Request(
+        f"{FLESPI_BASE_URL}/devices",
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(create_req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("result", [])
+            if results:
+                return results[0]["id"], results[0].get("name", "")
+    except Exception:
+        pass
+
+    return None, None
+
+
+def add_device_to_flespi_group(group_id: int, device_id: int):
+    """Добавляет устройство в группу Flespi."""
+    if not group_id or not device_id:
+        return False
+    headers = {
+        "Authorization": f"FlespiToken {FLESPI_TOKEN}",
+        "Accept": "application/json",
+    }
+    url = f"{FLESPI_BASE_URL}/groups/{group_id}/devices/{device_id}"
+    req = urllib.request.Request(url, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return True
+    except Exception:
+        return False
+
+
+def determine_flespi_target_group(contractor: str, etoll: bool, sent: bool):
+    """
+    Определяет группу Flespi по правилам:
+    - overseer + (sent & etoll) -> 278416 (Overseer sent+e-toll)
+    - overseer + etoll (без sent) -> 278414 (Overseer e-toll)
+    - overseer + sent (без etoll) -> 278415 (Overseer sent)
+    - motoguard + etoll -> 247707 (MotoGuard e-toll)
+    """
+    clean_c = contractor.strip().lower()
+    if "overseer" in clean_c:
+        if sent and etoll:
+            return FLESPI_GROUPS["overseer_sent_etoll"], "Overseer sent+e-toll"
+        elif etoll:
+            return FLESPI_GROUPS["overseer_etoll"], "Overseer e-toll"
+        elif sent:
+            return FLESPI_GROUPS["overseer_sent"], "Overseer sent"
+    elif "motoguard" in clean_c or "moto" in clean_c:
+        if etoll:
+            return FLESPI_GROUPS["motoguard_etoll"], "MotoGuard e-toll"
+
+    # Default fallback for ATK-GPS / others:
+    if "overseer" in clean_c or "sent" in clean_c:
+        return FLESPI_GROUPS["overseer_sent_etoll"], "Overseer sent+e-toll"
+    return FLESPI_GROUPS["motoguard_etoll"], "MotoGuard e-toll"
+
+
+def sync_device_with_flespi(imei: str, contractor: str, etoll: bool, sent: bool):
+    """Синхронизирует устройство с Flespi и добавляет в нужную группу."""
+    group_id, group_name = determine_flespi_target_group(contractor, etoll, sent)
+    dev_id, dev_name = get_or_create_flespi_device(imei, contractor)
+    if dev_id and group_id:
+        success = add_device_to_flespi_group(group_id, dev_id)
+        if success:
+            return True, group_name, dev_id
+    return False, group_name, dev_id
+
+
+# ==============================================================================
+# --- PUESC SOAP МЕТОДЫ ---
+# ==============================================================================
+
 def create_ws_security_credentials(password: str):
     """Формирует параметры WS-Security UsernameToken (PasswordDigest)."""
     password_bytes = password.encode("utf-8")
@@ -99,7 +233,6 @@ def create_ws_security_credentials(password: str):
 def create_puesc_registration_xml(devices: list):
     """
     Формирует XML ZSL_120 для добавления устройств.
-    devices: list of dict {'imei': str, 'info': str, 'etoll': bool, 'sent': bool}
     """
     xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <ns1:ZSL_120 xmlns:ns1="http://www.mf.gov.pl/SENT/2020/07/21/ZSL_120.xsd" xmlns:ns2="http://www.mf.gov.pl/SENT/2020/07/21/ZTypes.xsd">
@@ -319,8 +452,7 @@ def query_single_device_info(imei: str, max_wait_sec: int = 4):
 
 async def process_registration_request(contractor: str, devices_data: list):
     """
-    Асинхронный процесс регистрации списка устройств в PUESC.
-    Оптимизирован для предотвращения таймаутов браузера/Cloudflare.
+    Асинхронный процесс регистрации списка устройств в PUESC + Синхронизация с Flespi группами.
     """
     target_imeis = {str(d["imei"]).strip() for d in devices_data if str(d.get("imei", "")).strip()}
     today_str = datetime.now().strftime("%d.%m.%Y")
@@ -410,9 +542,9 @@ async def process_registration_request(contractor: str, devices_data: list):
             break
         await asyncio.sleep(1.5)
 
-    # 4. Если устройство уже было в базе, запрашиваем через ZSL_122 (только валидные IMEI длиной >= 6)
+    # 4. Если устройство уже было в базе, запрашиваем через ZSL_122
     missing_imeis = [m for m in (target_imeis - set(found_devices.keys()) - {e['deviceId'] for e in found_errors}) if len(m) >= 6]
-    for m_imei in missing_imeis[:3]:  # Ограничиваем до 3 параллельно, чтобы не зависать
+    for m_imei in missing_imeis[:3]:
         existing_info = await loop.run_in_executor(None, query_single_device_info, m_imei, 3)
         if existing_info:
             found_devices[m_imei] = existing_info
@@ -422,41 +554,62 @@ async def process_registration_request(contractor: str, devices_data: list):
         with open(response_xml_path, "w", encoding="utf-8") as f:
             f.write(raw_response_xml)
 
-    # 6. Формируем отчеты TXT и CSV
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # CSV
-    with open(result_csv_path, "w", encoding="utf-8") as f:
-        f.write("IMEI;GeoLocatorNumber;GeoLocatorPIN;Status;CreationDate;AdditionalInformation;Type\n")
-        for imei, d in found_devices.items():
-            reg_type = "EXISTING" if d.get("is_existing") else "NEW"
-            f.write(f"{d['deviceId']};{d['locNum']};{d['locPin']};{d['status']};{d['created']};{d['info']};{reg_type}\n")
-        for e in found_errors:
-            f.write(f"{e['deviceId']};;;;;ERROR: {e['reason']}\n")
-
-    # TXT
-    with open(result_txt_path, "w", encoding="utf-8") as f:
-        f.write("=" * 85 + "\n")
-        f.write("ДОКУМЕНТ: РЕЗУЛЬТАТЫ РЕГИСТРАЦИИ УСТРОЙСТВ В PUESC (e-TOLL / SENT)\n")
-        f.write(f"Контрагент: {contractor or 'Общий'}\n")
-        f.write(f"Оператор: {OBE_SERVICE_NUMBER} ({OBE_OPERATOR_IDENTITY_NUMBER})\n")
-        f.write(f"Дата формирования: {now_str}\n")
-        f.write("=" * 85 + "\n")
-        f.write(f"{'IMEI':<18} | {'Номер локатора (ID)':<22} | {'PIN-код':<8} | {'Статус':<8} | {'Дата / Примечание'}\n")
-        f.write("-" * 85 + "\n")
-        for imei, d in found_devices.items():
-            note = "(ранее в базе)" if d.get("is_existing") else "(новый)"
-            f.write(f"{d['deviceId']:<18} | {d['locNum']:<22} | {d['locPin']:<8} | {d['status']:<8} | {d['created']} {note}\n")
-        for e in found_errors:
-            f.write(f"{e['deviceId']:<18} | {'-':<22} | {'-':<8} | {'ОШИБКА':<8} | {e['reason']}\n")
-        f.write("=" * 85 + "\n")
-
-    # Преобразуем в структурированный список результатов
-    results_list = []
+    # 6. Синхронизация с FLESPI ГРУППАМИ
+    flespi_status_map = {}
     req_map = {str(d["imei"]).strip(): d for d in devices_data}
 
     for imei in target_imeis:
         src = req_map.get(imei, {})
+        etoll_flag = src.get("etoll", True)
+        sent_flag = src.get("sent", True)
+
+        flespi_ok, flespi_grp, dev_id = await loop.run_in_executor(
+            None, sync_device_with_flespi, imei, contractor, etoll_flag, sent_flag
+        )
+        flespi_status_map[imei] = {
+            "group": flespi_grp,
+            "synced": flespi_ok,
+            "flespi_id": dev_id,
+        }
+
+    # 7. Формируем отчеты TXT и CSV
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # CSV
+    with open(result_csv_path, "w", encoding="utf-8") as f:
+        f.write("IMEI;GeoLocatorNumber;GeoLocatorPIN;Status;CreationDate;AdditionalInformation;FlespiGroup;Type\n")
+        for imei, d in found_devices.items():
+            reg_type = "EXISTING" if d.get("is_existing") else "NEW"
+            f_grp = flespi_status_map.get(imei, {}).get("group", "")
+            f.write(f"{d['deviceId']};{d['locNum']};{d['locPin']};{d['status']};{d['created']};{d['info']};{f_grp};{reg_type}\n")
+        for e in found_errors:
+            f_grp = flespi_status_map.get(e['deviceId'], {}).get("group", "")
+            f.write(f"{e['deviceId']};;;;;{f_grp};ERROR: {e['reason']}\n")
+
+    # TXT
+    with open(result_txt_path, "w", encoding="utf-8") as f:
+        f.write("=" * 110 + "\n")
+        f.write("ДОКУМЕНТ: РЕЗУЛЬТАТЫ РЕГИСТРАЦИИ УСТРОЙСТВ В PUESC (e-TOLL / SENT) & FLESPI\n")
+        f.write(f"Контрагент: {contractor or 'Общий'}\n")
+        f.write(f"Оператор: {OBE_SERVICE_NUMBER} ({OBE_OPERATOR_IDENTITY_NUMBER})\n")
+        f.write(f"Дата формирования: {now_str}\n")
+        f.write("=" * 110 + "\n")
+        f.write(f"{'IMEI':<18} | {'Номер локатора':<18} | {'PIN':<6} | {'Статус':<8} | {'Группа Flespi':<24} | {'Примечание'}\n")
+        f.write("-" * 110 + "\n")
+        for imei, d in found_devices.items():
+            note = "(ранее в базе)" if d.get("is_existing") else "(новый)"
+            f_grp = flespi_status_map.get(imei, {}).get("group", "-")
+            f.write(f"{d['deviceId']:<18} | {d['locNum']:<18} | {d['locPin']:<6} | {d['status']:<8} | {f_grp:<24} | {d['created']} {note}\n")
+        for e in found_errors:
+            f_grp = flespi_status_map.get(e['deviceId'], {}).get("group", "-")
+            f.write(f"{e['deviceId']:<18} | {'-':<18} | {'-':<6} | {'ОШИБКА':<8} | {f_grp:<24} | {e['reason']}\n")
+        f.write("=" * 110 + "\n")
+
+    # Преобразуем в структурированный список результатов
+    results_list = []
+    for imei in target_imeis:
+        src = req_map.get(imei, {})
+        f_info = flespi_status_map.get(imei, {})
         if imei in found_devices:
             d = found_devices[imei]
             results_list.append({
@@ -469,6 +622,8 @@ async def process_registration_request(contractor: str, devices_data: list):
                 "status": d.get("status", "0"),
                 "created": d.get("created", ""),
                 "is_existing": d.get("is_existing", False),
+                "flespi_group": f_info.get("group", ""),
+                "flespi_synced": f_info.get("synced", False),
                 "success": True,
                 "error": None,
             })
@@ -484,6 +639,8 @@ async def process_registration_request(contractor: str, devices_data: list):
                 "status": "-",
                 "created": "-",
                 "is_existing": False,
+                "flespi_group": f_info.get("group", ""),
+                "flespi_synced": f_info.get("synced", False),
                 "success": False,
                 "error": err,
             })
@@ -732,7 +889,7 @@ def init_app():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print("=" * 70)
-    print(f"🚀 PUESC e-TOLL / SENT Web Service запущен на http://localhost:{port}")
+    print(f"🚀 PUESC & Flespi Web Service запущен на http://localhost:{port}")
     print(f"📁 Папка отчетов: {REPORTS_DIR}")
     print("=" * 70)
     web.run_app(init_app(), host="0.0.0.0", port=port)

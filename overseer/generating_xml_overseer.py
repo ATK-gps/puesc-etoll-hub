@@ -427,24 +427,74 @@ def save_results_documents(found_devices: dict, txt_path: Path, csv_path: Path):
         return
 
     # 1. Сохраняем в CSV
+# FLESPI CONFIG
+FLESPI_TOKEN = "BNwhrmoKyFAqUVKfGbcltAcX3kXAq5fmnxY5SzqduN4Pa0R4BUSVaoKsJOKu8IOJ"
+FLESPI_BASE_URL = "https://flespi.io/gw"
+FLESPI_GROUP_OVERSEER_SENT_ETOLL = 278416  # "Overseer sent+e-toll"
+
+
+def sync_overseer_flespi(imei: str):
+    """Создает устройство в Flespi и добавляет в группу Overseer sent+e-toll."""
+    headers = {
+        "Authorization": f"FlespiToken {FLESPI_TOKEN}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    dev_id = None
+    # 1. Поиск
+    try:
+        req = urllib.request.Request(f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={imei}", headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("result"):
+                dev_id = data["result"][0]["id"]
+    except Exception:
+        pass
+
+    # 2. Создание
+    if not dev_id:
+        try:
+            payload = [{"name": f"overseer {imei}", "device_type_id": 14, "messages_ttl": 1209600, "configuration": {"ident": imei}}]
+            req = urllib.request.Request(f"{FLESPI_BASE_URL}/devices", data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("result"):
+                    dev_id = data["result"][0]["id"]
+        except Exception:
+            pass
+
+    # 3. Добавление в группу
+    if dev_id:
+        try:
+            req = urllib.request.Request(f"{FLESPI_BASE_URL}/groups/{FLESPI_GROUP_OVERSEER_SENT_ETOLL}/devices/{dev_id}", headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return True, dev_id
+        except Exception:
+            pass
+    return False, dev_id
+
+
+def save_results_documents(found_devices: dict, txt_path: Path, csv_path: Path):
+    """Сохраняет полученные данные в CSV и TXT с информацией о Flespi."""
+    # 1. Сохраняем в CSV-таблицу
     with open(csv_path, "w", encoding="utf-8") as f:
-        f.write("IMEI;GeoLocatorNumber;GeoLocatorPIN;Status;CreationDate;AdditionalInformation\n")
+        f.write("IMEI;GeoLocatorNumber;GeoLocatorPIN;Status;CreationDate;AdditionalInformation;FlespiGroup\n")
         for imei, d in found_devices.items():
-            f.write(f"{d['deviceId']};{d['locNum']};{d['locPin']};{d['status']};{d['created']};{d['info']}\n")
+            f.write(f"{d['deviceId']};{d['locNum']};{d['locPin']};{d['status']};{d['created']};{d['info']};Overseer sent+e-toll\n")
 
     # 2. Сохраняем в структурированный TXT-документ
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(txt_path, "w", encoding="utf-8") as f:
-        f.write("=" * 85 + "\n")
-        f.write(f"ДОКУМЕНТ: РЕЗУЛЬТАТЫ РЕГИСТРАЦИИ УСТРОЙСТВ В PUESC (e-TOLL)\n")
+        f.write("=" * 110 + "\n")
+        f.write(f"ДОКУМЕНТ: РЕЗУЛЬТАТЫ РЕГИСТРАЦИИ УСТРОЙСТВ В PUESC (e-TOLL / SENT) & FLESPI\n")
         f.write(f"Оператор: {OBE_SERVICE_NUMBER} ({OBE_OPERATOR_IDENTITY_NUMBER})\n")
         f.write(f"Дата формирования: {now_str}\n")
-        f.write("=" * 85 + "\n")
-        f.write(f"{'IMEI':<18} | {'Номер локатора (ID)':<22} | {'PIN-код':<8} | {'Статус':<8} | {'Дата'}\n")
-        f.write("-" * 85 + "\n")
+        f.write("=" * 110 + "\n")
+        f.write(f"{'IMEI':<18} | {'Номер локатора':<20} | {'PIN':<6} | {'Статус':<8} | {'Группа Flespi':<24} | {'Дата'}\n")
+        f.write("-" * 110 + "\n")
         for imei, d in found_devices.items():
-            f.write(f"{d['deviceId']:<18} | {d['locNum']:<22} | {d['locPin']:<8} | {d['status']:<8} | {d['created']}\n")
-        f.write("=" * 85 + "\n")
+            f.write(f"{d['deviceId']:<18} | {d['locNum']:<20} | {d['locPin']:<6} | {d['status']:<8} | {'Overseer sent+e-toll':<24} | {d['created']}\n")
+        f.write("=" * 110 + "\n")
 
     print(f"\n📄 Документы с присвоенными данными успешно сформированы:")
     print(f"   ├─ Текстовый документ: {txt_path.name}")
@@ -523,6 +573,13 @@ def main():
 
         # Сохраняем присвоенные данные в документы TXT и CSV
         save_results_documents(found_devices, result_txt_path, result_csv_path)
+
+        # Синхронизация с группой Flespi (Overseer sent+e-toll)
+        print(f"\n📡 Синхронизация устройств с группой Flespi 'Overseer sent+e-toll'...")
+        for imei in found_devices.keys():
+            ok, dev_id = sync_overseer_flespi(imei)
+            status_tag = "✅ добавлено в группу 'Overseer sent+e-toll'" if ok else "⚠ не удалось добавить"
+            print(f"  • IMEI {imei} (Flespi ID: {dev_id}) -> {status_tag}")
 
     if found_errors:
         print(f"\n❌ Ошибки регистрации устройств: {len(found_errors)}")
