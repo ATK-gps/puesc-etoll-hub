@@ -861,7 +861,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         setupDropzone();
-        addImeisToList(['123456789', '864636068828181']);
+        addImeisToList(['864636068828181', '357544374994032']);
         loadHistory();
     });
 
@@ -1189,24 +1189,30 @@
         results.forEach(r => {
             const tr = document.createElement('tr');
             const noteHtml = r.is_existing 
-                ? `<span style="color: #60a5fa; font-weight: 500;">(Ранее в базе)</span>`
-                : (r.success ? `<span style="color: #34d399; font-weight: 500;">(Новая регистрация)</span>` : `<span style="color: #f87171;">${r.error || 'Ошибка'}</span>`);
+                ? `<span style="color: #60a5fa; font-weight: 500;">🔵 Ранее в базе (ID и PIN сохранены)</span>`
+                : (r.success ? `<span style="color: #34d399; font-weight: 500;">🟢 Новая регистрация</span>` : `<span style="color: #f87171; font-weight: 500;">❌ ${r.error || 'Отклонено PUESC'}</span>`);
 
-            const flespiHtml = r.flespi_group 
+            const statusHtml = r.success
+                ? `<span class="badge-status-0">0 Активен</span>`
+                : `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Ошибка</span>`;
+
+            const flespiHtml = (r.flespi_synced && r.flespi_group) 
                 ? `<span style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">📁 ${r.flespi_group}</span>`
                 : `<span style="color: var(--text-dim);">-</span>`;
 
+            const locNumHtml = (r.locNum && r.locNum !== '-')
+                ? `<span>${r.locNum}</span> <button class="copy-btn" onclick="copyToClipboard('${r.locNum}')" title="Скопировать">📋</button>`
+                : `<span style="color: var(--text-dim);">-</span>`;
+
+            const locPinHtml = (r.locPin && r.locPin !== '-')
+                ? `<span style="font-family: monospace; font-weight: 600; color: #f59e0b;">${r.locPin}</span> <button class="copy-btn" onclick="copyToClipboard('${r.locPin}')" title="Скопировать">📋</button>`
+                : `<span style="color: var(--text-dim);">-</span>`;
+
             tr.innerHTML = `
-                <td style="font-weight: 600;">${r.imei}</td>
-                <td>
-                    ${r.locNum}
-                    ${r.locNum && r.locNum !== '-' ? `<button class="copy-btn" onclick="copyToClipboard('${r.locNum}')">📋</button>` : ''}
-                </td>
-                <td>
-                    <span style="font-family: monospace; font-weight: 600; color: #f59e0b;">${r.locPin}</span>
-                    ${r.locPin && r.locPin !== '-' ? `<button class="copy-btn" onclick="copyToClipboard('${r.locPin}')">📋</button>` : ''}
-                </td>
-                <td><span class="badge-status-0">0 Активен</span></td>
+                <td style="font-weight: 600; ${!r.success ? 'color: #f87171;' : ''}">${r.imei}</td>
+                <td>${locNumHtml}</td>
+                <td>${locPinHtml}</td>
+                <td>${statusHtml}</td>
                 <td>${flespiHtml}</td>
                 <td>${noteHtml}</td>
             `;

@@ -95,6 +95,10 @@ def get_or_create_flespi_device(imei: str, contractor: str):
     Находит существующее устройство в Flespi по IMEI или создает новое.
     Возвращает: (device_id, device_name)
     """
+    clean_imei = str(imei).strip()
+    if len(clean_imei) < 6:
+        return None, None
+
     clean_c = contractor.strip().lower()
     headers = {
         "Authorization": f"FlespiToken {FLESPI_TOKEN}",
@@ -103,7 +107,7 @@ def get_or_create_flespi_device(imei: str, contractor: str):
     }
 
     # 1. Поиск по ident (IMEI)
-    search_url = f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={imei}"
+    search_url = f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={clean_imei}"
     req = urllib.request.Request(search_url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
@@ -194,13 +198,16 @@ def determine_flespi_target_group(contractor: str, etoll: bool, sent: bool):
 
 def sync_device_with_flespi(imei: str, contractor: str, etoll: bool, sent: bool):
     """Синхронизирует устройство с Flespi и добавляет в нужную группу."""
+    clean_imei = str(imei).strip()
+    if len(clean_imei) < 6:
+        return False, "", None
     group_id, group_name = determine_flespi_target_group(contractor, etoll, sent)
-    dev_id, dev_name = get_or_create_flespi_device(imei, contractor)
+    dev_id, dev_name = get_or_create_flespi_device(clean_imei, contractor)
     if dev_id and group_id:
         success = add_device_to_flespi_group(group_id, dev_id)
         if success:
             return True, group_name, dev_id
-    return False, group_name, dev_id
+    return False, "", dev_id
 
 
 def delete_flespi_devices(imeis_list: list):
