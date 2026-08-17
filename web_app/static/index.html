@@ -1254,13 +1254,17 @@
 
         results.forEach(r => {
             const tr = document.createElement('tr');
+            const locHtml = (r.locNum && r.locNum !== '-')
+                ? `<span>${r.locNum}</span>`
+                : `<span style="color: var(--text-dim);">-</span>`;
+
             tr.innerHTML = `
                 <td style="font-weight: 600;">${r.imei}</td>
-                <td>${r.locNum || '-'}</td>
-                <td>-</td>
-                <td><span class="badge-status-4">${r.status || '4 Удален'}</span></td>
+                <td>${locHtml}</td>
+                <td style="color: var(--text-dim);">-</td>
+                <td><span class="badge-status-4" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">4 Удален</span></td>
                 <td><span style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">🗑 Удалено из Flespi</span></td>
-                <td><span style="color: #34d399;">${r.result}</span></td>
+                <td><span style="color: #34d399; font-weight: 500;">${r.result}</span></td>
             `;
             tbody.appendChild(tr);
         });

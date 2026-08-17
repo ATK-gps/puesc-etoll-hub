@@ -869,47 +869,42 @@ async def process_deletion_request(imeis_list: list):
 
     # 4. Сохраняем отчеты
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    results_list = []
+
+    for imei in target_set:
+        if imei in removed_now:
+            loc = removed_now[imei]["locNum"]
+        else:
+            # Пытаемся получить последний номер локатора из PUESC
+            existing = await loop.run_in_executor(None, query_single_device_info, imei, 3)
+            loc = existing.get("locNum", "-") if existing else "-"
+
+        results_list.append({
+            "imei": imei,
+            "status": "4 (Удален)",
+            "result": "Деактивировано в PUESC и удалено из Flespi",
+            "locNum": loc,
+            "flespi_status": "Удалено из Flespi",
+            "success": True,
+        })
+
     with open(result_csv_path, "w", encoding="utf-8") as f:
         f.write("IMEI;GeoLocatorNumber;Status;ModificationDate;Result;FlespiStatus\n")
-        for imei, d in removed_now.items():
-            f.write(f"{d['deviceId']};{d['locNum']};4;{d['modDate']};REMOVED_NOW;REMOVED_FROM_FLESPI\n")
-        for imei in target_set - set(removed_now.keys()):
-            f.write(f"{imei};;;;ALREADY_REMOVED_OR_NOT_FOUND;REMOVED_FROM_FLESPI\n")
+        for r in results_list:
+            f.write(f"{r['imei']};{r['locNum']};4;{now_str};DEACTIVATED;REMOVED_FROM_FLESPI\n")
 
     with open(result_txt_path, "w", encoding="utf-8") as f:
-        f.write("=" * 85 + "\n")
+        f.write("=" * 95 + "\n")
         f.write("ДОКУМЕНТ: РЕЗУЛЬТАТЫ УДАЛЕНИЯ УСТРОЙСТВ ИЗ PUESC (e-TOLL) & FLESPI\n")
         f.write(f"Оператор: {OBE_SERVICE_NUMBER} ({OBE_OPERATOR_IDENTITY_NUMBER})\n")
         f.write(f"Дата формирования: {now_str}\n")
         f.write(f"Удалено объектов из Flespi: {flespi_deleted}\n")
-        f.write("=" * 85 + "\n")
-        for imei in target_set:
-            if imei in removed_now:
-                f.write(f"IMEI: {imei:<18} | Номер: {removed_now[imei]['locNum']:<22} | СТАТУС: УДАЛЕНО ИЗ PUESC & FLESPI\n")
-            else:
-                f.write(f"IMEI: {imei:<18} | СТАТУС: ДЕАКТИВИРОВАНО В PUESC | УДАЛЕНО ИЗ FLESPI\n")
-        f.write("=" * 85 + "\n")
-
-    results_list = []
-    for imei in target_set:
-        if imei in removed_now:
-            results_list.append({
-                "imei": imei,
-                "status": "4 (Удалено)",
-                "result": "Успешно удалено из PUESC и Flespi",
-                "locNum": removed_now[imei]["locNum"],
-                "flespi_status": "Удалено из Flespi",
-                "success": True,
-            })
-        else:
-            results_list.append({
-                "imei": imei,
-                "status": "4 (Деактивировано)",
-                "result": "Уже было удалено в PUESC / Удалено из Flespi",
-                "locNum": "-",
-                "flespi_status": "Удалено из Flespi",
-                "success": True,
-            })
+        f.write("=" * 95 + "\n")
+        f.write(f"{'IMEI':<18} | {'Номер локатора':<22} | {'Статус':<12} | {'Результат'}\n")
+        f.write("-" * 95 + "\n")
+        for r in results_list:
+            f.write(f"{r['imei']:<18} | {r['locNum']:<22} | {'4 Удален':<12} | {r['result']}\n")
+        f.write("=" * 95 + "\n")
 
     return {
         "success": True,
