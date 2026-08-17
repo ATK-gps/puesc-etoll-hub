@@ -307,32 +307,34 @@ def check_existing_device_removal_status(missing_imeis: set, max_wait_sec: int =
 
                 try:
                     doc_root = ET.fromstring(decoded_xml)
-                    for dev in doc_root.findall(".//{*}OBEDevicesData"):
-                        dev_id = (dev.findtext("{*}GPSDeviceID") or "").strip()
+                    grouped = {}
+                    for d in doc_root.findall(".//{*}OBEDevicesData"):
+                        dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
                         if dev_id == imei:
-                            status = dev.findtext("{*}GPSDeviceStatus", default="")
-                            loc_num = dev.findtext("{*}GeoLocatorNumber", default="")
-                            mod_date = dev.findtext("{*}ModificationDate") or dev.findtext("{*}CreationDate") or ""
+                            grouped.setdefault(dev_id, []).append({
+                                "deviceId": dev_id,
+                                "locNum": d.findtext("{*}GeoLocatorNumber", default=""),
+                                "status": d.findtext("{*}GPSDeviceStatus", default=""),
+                                "modDate": d.findtext("{*}ModificationDate") or d.findtext("{*}CreationDate") or "",
+                            })
 
-                            if status in ("4", "1"):
-                                already_removed[dev_id] = {
-                                    "deviceId": dev_id,
-                                    "locNum": loc_num,
-                                    "status": status,
-                                    "modDate": mod_date,
-                                    "already_removed": True,
-                                }
-                            else:
-                                already_removed[dev_id] = {
-                                    "deviceId": dev_id,
-                                    "locNum": loc_num,
-                                    "status": status,
-                                    "modDate": mod_date,
-                                    "already_removed": False,
-                                }
-                            found = True
-                            break
-                    if found:
+                    if imei in grouped:
+                        # Сортируем: активные (0) первыми, затем по свежести даты
+                        records = sorted(
+                            grouped[imei],
+                            key=lambda r: (1 if str(r["status"]).strip() == "0" else 0, r["modDate"]),
+                            reverse=True
+                        )
+                        best = records[0]
+                        status = str(best["status"]).strip()
+                        already_removed[imei] = {
+                            "deviceId": best["deviceId"],
+                            "locNum": best["locNum"],
+                            "status": status,
+                            "modDate": best["modDate"],
+                            "already_removed": (status in ("4", "1")),
+                        }
+                        found = True
                         break
                 except Exception:
                     pass

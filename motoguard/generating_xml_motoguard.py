@@ -287,7 +287,50 @@ def poll_puesc_document():
         return None, None
 
 
-def query_existing_devices_info(missing_imeis: set, max_wait_sec: int = 30):
+def parse_obe_devices_data(doc_root, target_imeis: set = None):
+    """
+    Разбирает ZSL_123 (OBEDevicesData), группирует записи по IMEI и для каждого
+    выбирает наиболее актуальную запись (приоритет: статус 0, свежая дата).
+    """
+    grouped = {}
+    for d in doc_root.findall(".//{*}OBEDevicesData"):
+        dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
+        if not dev_id or (target_imeis and dev_id not in target_imeis):
+            continue
+
+        item = {
+            "deviceId": dev_id,
+            "locNum": d.findtext("{*}GeoLocatorNumber", default="") or "-",
+            "locPin": d.findtext("{*}GeoLocatorPIN", default="") or "-",
+            "status": d.findtext("{*}GPSDeviceStatus", default="") or "0",
+            "created": d.findtext("{*}CreationDate") or "",
+            "modified": d.findtext("{*}ModificationDate") or "",
+            "info": d.findtext("{*}AdditionalInformation", default=""),
+        }
+        grouped.setdefault(dev_id, []).append(item)
+
+    best_results = {}
+    for dev_id, records in grouped.items():
+        def sort_key(r):
+            is_active = 1 if str(r["status"]).strip() == "0" else 0
+            date_str = r["modified"] or r["created"] or ""
+            return (is_active, date_str)
+
+        sorted_records = sorted(records, key=sort_key, reverse=True)
+        best = sorted_records[0]
+        best_results[dev_id] = {
+            "deviceId": best["deviceId"],
+            "locNum": best["locNum"],
+            "locPin": best["locPin"],
+            "status": best["status"],
+            "created": best["created"] or best["modified"],
+            "info": best["info"],
+            "is_existing": (str(best["status"]).strip() == "0"),
+        }
+    return best_results
+
+
+def query_existing_devices_info(missing_imeis: set, max_wait_sec: int = 15):
     """
     Для IMEI, которые уже были зарегистрированы ранее (не вернулись в ZSL_121),
     отправляет поисковый запрос ZSL_122 и получает актуальные реквизиты (ZSL_123).
@@ -305,27 +348,16 @@ def query_existing_devices_info(missing_imeis: set, max_wait_sec: int = 30):
         # Ожидаем ZSL_123 в очереди
         start_t = time.time()
         while time.time() - start_t < max_wait_sec:
-            time.sleep(3)
+            time.sleep(2)
             fn, decoded_xml = poll_puesc_document()
             if not decoded_xml:
                 continue
 
             try:
                 doc_root = ET.fromstring(decoded_xml)
-                for dev in doc_root.findall(".//{*}OBEDevicesData"):
-                    dev_id = (dev.findtext("{*}GPSDeviceID") or "").strip()
-                    if dev_id == imei:
-                        found_existing[dev_id] = {
-                            "deviceId": dev_id,
-                            "locNum": dev.findtext("{*}GeoLocatorNumber", default=""),
-                            "locPin": dev.findtext("{*}GeoLocatorPIN", default=""),
-                            "status": dev.findtext("{*}GPSDeviceStatus", default=""),
-                            "created": dev.findtext("{*}CreationDate", default=""),
-                            "info": dev.findtext("{*}AdditionalInformation", default=""),
-                            "is_existing": True,
-                        }
-                        break
-                if imei in found_existing:
+                parsed = parse_obe_devices_data(doc_root, {imei})
+                if imei in parsed and str(parsed[imei].get("status", "")).strip() == "0":
+                    found_existing[imei] = parsed[imei]
                     break
             except Exception:
                 pass
@@ -362,25 +394,15 @@ def wait_and_fetch_target_response(target_imeis: set, response_xml_path: Path, m
                             "deviceId": dev_id,
                             "locNum": d.findtext("{*}GeoLocatorNumber", default=""),
                             "locPin": d.findtext("{*}GeoLocatorPIN", default=""),
-                            "status": d.findtext("{*}GPSDeviceStatus", default=""),
+                            "status": d.findtext("{*}GPSDeviceStatus", default="0"),
                             "created": d.findtext("{*}CreationDate", default=""),
                             "info": d.findtext("{*}AdditionalInformation", default=""),
                             "is_existing": False,
                         }
 
                 # 2. Проверяем ZSL_123 (поисковые ответы)
-                for d in doc_root.findall(".//{*}OBEDevicesData"):
-                    dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
-                    if dev_id in target_imeis:
-                        found_devices[dev_id] = {
-                            "deviceId": dev_id,
-                            "locNum": d.findtext("{*}GeoLocatorNumber", default=""),
-                            "locPin": d.findtext("{*}GeoLocatorPIN", default=""),
-                            "status": d.findtext("{*}GPSDeviceStatus", default=""),
-                            "created": d.findtext("{*}CreationDate", default=""),
-                            "info": d.findtext("{*}AdditionalInformation", default=""),
-                            "is_existing": True,
-                        }
+                parsed_123 = parse_obe_devices_data(doc_root, target_imeis)
+                found_devices.update(parsed_123)
 
                 # 3. Проверяем ошибки
                 for d in doc_root.findall(".//{*}DevicesNotRegistered"):

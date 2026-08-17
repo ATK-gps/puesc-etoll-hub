@@ -532,12 +532,60 @@ def poll_single_document_from_queue():
         return None, None
 
 
-def query_single_device_info(imei: str, max_wait_sec: int = 4):
-    """Поиск данных конкретного устройства через ZSL_122 с коротким таймаутом."""
-    if len(str(imei).strip()) < 6:
+def parse_obe_devices_data(doc_root, target_imeis: set = None):
+    """
+    Разбирает ZSL_123 (OBEDevicesData), группирует записи по IMEI и для каждого
+    выбирает наиболее актуальную запись:
+    1. Приоритет: активная запись (GPSDeviceStatus == '0') с самой свежей датой.
+    2. Если активных нет — берет самую свежую запись по дате изменения (например, статус 4 - удален).
+    """
+    grouped = {}
+    for d in doc_root.findall(".//{*}OBEDevicesData"):
+        dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
+        if not dev_id:
+            continue
+        if target_imeis and dev_id not in target_imeis:
+            continue
+
+        item = {
+            "deviceId": dev_id,
+            "locNum": d.findtext("{*}GeoLocatorNumber", default="") or "-",
+            "locPin": d.findtext("{*}GeoLocatorPIN", default="") or "-",
+            "status": d.findtext("{*}GPSDeviceStatus", default="") or "0",
+            "created": d.findtext("{*}CreationDate") or "",
+            "modified": d.findtext("{*}ModificationDate") or "",
+            "info": d.findtext("{*}AdditionalInformation", default=""),
+        }
+        grouped.setdefault(dev_id, []).append(item)
+
+    best_results = {}
+    for dev_id, records in grouped.items():
+        def sort_key(r):
+            is_active = 1 if str(r["status"]).strip() == "0" else 0
+            date_str = r["modified"] or r["created"] or ""
+            return (is_active, date_str)
+
+        sorted_records = sorted(records, key=sort_key, reverse=True)
+        best = sorted_records[0]
+        best_results[dev_id] = {
+            "deviceId": best["deviceId"],
+            "locNum": best["locNum"],
+            "locPin": best["locPin"],
+            "status": best["status"],
+            "created": best["created"] or best["modified"],
+            "info": best["info"],
+            "is_existing": (str(best["status"]).strip() == "0"),
+        }
+    return best_results
+
+
+def query_single_device_info(imei: str, max_wait_sec: int = 5):
+    """Поиск данных конкретного устройства через ZSL_122 с точным выбором активной записи."""
+    clean_imei = str(imei).strip()
+    if len(clean_imei) < 6:
         return None
 
-    zsl122_xml = create_zsl122_query_xml(imei)
+    zsl122_xml = create_zsl122_query_xml(clean_imei)
     success, sys_ref, _ = send_soap_to_puesc(zsl122_xml, filename="ZSL_122.xml")
     if not success:
         return None
@@ -551,18 +599,9 @@ def query_single_device_info(imei: str, max_wait_sec: int = 4):
 
         try:
             doc_root = ET.fromstring(decoded_xml)
-            for dev in doc_root.findall(".//{*}OBEDevicesData"):
-                dev_id = (dev.findtext("{*}GPSDeviceID") or "").strip()
-                if dev_id == imei:
-                    return {
-                        "deviceId": dev_id,
-                        "locNum": dev.findtext("{*}GeoLocatorNumber", default=""),
-                        "locPin": dev.findtext("{*}GeoLocatorPIN", default=""),
-                        "status": dev.findtext("{*}GPSDeviceStatus", default=""),
-                        "created": dev.findtext("{*}CreationDate") or dev.findtext("{*}ModificationDate") or "",
-                        "info": dev.findtext("{*}AdditionalInformation", default=""),
-                        "is_existing": True,
-                    }
+            parsed = parse_obe_devices_data(doc_root, {clean_imei})
+            if clean_imei in parsed:
+                return parsed[clean_imei]
         except Exception:
             pass
 
@@ -601,12 +640,12 @@ async def process_registration_request(contractor: str, devices_data: list):
             "results": [],
         }
 
-    # 3. Ожидаем ответ ZSL_121
+    # 3. Ожидаем ответ ZSL_121 от PUESC
     found_devices = {}
     found_errors = []
     raw_response_xml = None
     start_t = time.time()
-    max_wait = 14
+    max_wait = 16
 
     while time.time() - start_t < max_wait:
         while True:
@@ -616,7 +655,8 @@ async def process_registration_request(contractor: str, devices_data: list):
 
             try:
                 doc_root = ET.fromstring(decoded_xml)
-                # ZSL_121
+                
+                # 3.1 Ответ ZSL_121 - УСПЕШНАЯ РЕГИСТРАЦИЯ
                 for d in doc_root.findall(".//{*}DevicesRegistered"):
                     dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
                     if dev_id in target_imeis:
@@ -630,21 +670,7 @@ async def process_registration_request(contractor: str, devices_data: list):
                             "is_existing": False,
                         }
 
-                # ZSL_123
-                for d in doc_root.findall(".//{*}OBEDevicesData"):
-                    dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
-                    if dev_id in target_imeis:
-                        found_devices[dev_id] = {
-                            "deviceId": dev_id,
-                            "locNum": d.findtext("{*}GeoLocatorNumber", default=""),
-                            "locPin": d.findtext("{*}GeoLocatorPIN", default=""),
-                            "status": d.findtext("{*}GPSDeviceStatus", default="0"),
-                            "created": d.findtext("{*}CreationDate", default=""),
-                            "info": d.findtext("{*}AdditionalInformation", default=""),
-                            "is_existing": True,
-                        }
-
-                # Errors
+                # 3.2 Ответ ZSL_121 - ОШИБКИ / ОТКАЗЫ
                 for d in doc_root.findall(".//{*}DevicesNotRegistered"):
                     dev_id = (d.findtext("{*}GPSDeviceID") or "").strip()
                     if dev_id in target_imeis:
@@ -661,11 +687,11 @@ async def process_registration_request(contractor: str, devices_data: list):
             break
         await asyncio.sleep(1.5)
 
-    # 4. Если устройство уже было в базе, запрашиваем через ZSL_122
+    # 4. Если устройство уже было в базе и активно (или ZSL_121 не успел прийти), запрашиваем через ZSL_122
     missing_imeis = [m for m in (target_imeis - set(found_devices.keys()) - {e['deviceId'] for e in found_errors}) if len(m) >= 6]
-    for m_imei in missing_imeis[:3]:
-        existing_info = await loop.run_in_executor(None, query_single_device_info, m_imei, 3)
-        if existing_info:
+    for m_imei in missing_imeis:
+        existing_info = await loop.run_in_executor(None, query_single_device_info, m_imei, 5)
+        if existing_info and str(existing_info.get("status", "")).strip() == "0":
             found_devices[m_imei] = existing_info
 
     # 5. Сохраняем сырой ответ
