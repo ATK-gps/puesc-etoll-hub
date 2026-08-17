@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: puesc-etoll-hub
+    env: python
+    buildCommand: pip install -r web_app/requirements.txt
+    startCommand: python web_app/server.py
+    plan: free
+    envVars:
+      - key: PORT
+        value: 10000

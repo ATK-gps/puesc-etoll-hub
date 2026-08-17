@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUESC e-TOLL & SENT Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0a0d14;
+            --bg-card: rgba(18, 24, 38, 0.85);
+            --bg-card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --primary-glow: rgba(59, 130, 246, 0.35);
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.3);
+            --accent-red: #ef4444;
+            --accent-red-glow: rgba(239, 68, 68, 0.3);
+            --accent-purple: #8b5cf6;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --radius-sm: 6px;
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px 16px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--bg-card-border);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: #fff;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-title span.badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #34d399;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        /* GRID LAYOUT */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* CARD */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--bg-card-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* FORM ELEMENTS */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            background: rgba(10, 14, 23, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            color: var(--text-main);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .chips-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .chip {
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-muted);
+        }
+
+        .chip:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+            color: #93c5fd;
+        }
+
+        /* DROPZONE */
+        .dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+            background: rgba(10, 14, 23, 0.4);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .dropzone-icon {
+            font-size: 26px;
+        }
+
+        .dropzone-text {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .dropzone-text strong {
+            color: var(--primary);
+        }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px var(--primary-glow);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--accent-red-glow);
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* BATCH TOGGLE BAR */
+        .batch-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .batch-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* TABLE */
+        .table-container {
+            max-height: 380px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            background: rgba(10, 14, 23, 0.6);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+
+        th {
+            background: rgba(18, 24, 38, 0.98);
+            padding: 12px 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            text-align: left;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .cell-center {
+            text-align: center;
+        }
+
+        .table-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+            margin: 0 auto;
+            display: block;
+        }
+
+        .btn-remove-row {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+
+        .btn-remove-row:hover {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.15);
+            transform: scale(1.1);
+        }
+
+        /* ACTION FOOTER */
+        .actions-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-md);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .main-cta-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* STATS CARDS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* PROGRESS BOX */
+        .progress-box {
+            background: rgba(10, 14, 23, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .progress-bar-wrap {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* COPY BUTTON */
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-left: 6px;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* DOWNLOAD BUTTONS BAR */
+        .downloads-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e293b;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .badge-status-0 {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-status-4 {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <header>
+        <div class="brand-block">
+            <div class="brand-logo">ET</div>
+            <div>
+                <div class="brand-title">
+                    PUESC e-TOLL & SENT Hub
+                    <span class="badge">PROD</span>
+                </div>
+                <div class="brand-subtitle">Оператор ZSL-GRNC-0 (BY291080284) • Web Service</div>
+            </div>
+        </div>
+        <div class="server-status">
+            <div class="status-dot"></div>
+            <span>ws.puesc.gov.pl • Подключено</span>
+        </div>
+    </header>
+
+    <!-- MAIN INPUT & CONTROLS (GRID 2) -->
+    <div class="grid-2">
+        <!-- CARD 1: Ввод данных и Контрагент -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📝 1. Контрагент и Загрузка IMEI</div>
+                <button class="btn btn-secondary btn-sm" onclick="pasteFromClipboard()">📋 Из буфера</button>
+            </div>
+
+            <div class="form-group">
+                <label>Наименование контрагента:</label>
+                <input type="text" id="contractorInput" placeholder="Например: MotoGuard, Overseer, ООО ТрансАвто" value="MotoGuard" oninput="updateDevicesInfoWithContractor()">
+                <div class="chips-row">
+                    <span class="chip" onclick="setContractor('MotoGuard')">MotoGuard</span>
+                    <span class="chip" onclick="setContractor('Overseer')">Overseer</span>
+                    <span class="chip" onclick="setContractor('ATK-GPS')">ATK-GPS</span>
+                    <span class="chip" onclick="setContractor('ТрансЛогистик')">ТрансЛогистик</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Быстрая вставка списка IMEI (по одному на строку):</label>
+                <textarea id="quickImeiTextarea" rows="3" placeholder="357544374994032&#10;357544375116882&#10;123456789"></textarea>
+                <button class="btn btn-secondary btn-sm" style="margin-top: 6px;" onclick="importFromTextarea()">➕ Добавить в таблицу</button>
+            </div>
+
+            <div class="form-group">
+                <label>Или перетащите файл (.txt / .csv):</label>
+                <div class="dropzone" id="fileDropzone" onclick="document.getElementById('fileInput').click()">
+                    <div class="dropzone-icon">📁</div>
+                    <div class="dropzone-text">Нажмите для выбора файла или <strong>перетащите сюда</strong></div>
+                    <input type="file" id="fileInput" accept=".txt,.csv" style="display: none;" onchange="handleFileSelect(event)">
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 2: Массовое управление и Таблица -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    ⚙ 2. Выбор e-TOLL / SENT
+                    <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">(Устройств: <strong id="devicesCountBadge" style="color: var(--primary);">0</strong>)</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="addNewRow()">+ Добавить строку</button>
+            </div>
+
+            <!-- ПАНЕЛЬ МАССОВОГО ВЫБОРА ГАЛОК -->
+            <div class="batch-bar">
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Управление галками:</span>
+                <div class="batch-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(true, true)">✅ Выбрать ВСЁ</button>
+                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(false, false)">❌ Снять ВСЁ</button>
+                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(true, false)">Только e-TOLL</button>
+                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(false, true)">Только SENT</button>
+                </div>
+            </div>
+
+            <!-- ТАБЛИЦА УСТРОЙСТВ -->
+            <div class="table-container">
+                <table id="devicesTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 36px; text-align: center;">#</th>
+                            <th style="width: 155px;">IMEI</th>
+                            <th>Доп. инфо</th>
+                            <th class="cell-center" style="width: 75px;">e-TOLL</th>
+                            <th class="cell-center" style="width: 75px;">SENT</th>
+                            <th class="cell-center" style="width: 40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="devicesTableBody">
+                        <!-- Строки генерируются динамически -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ПАНЕЛЬ ДЕЙСТВИЙ -->
+            <div class="actions-panel">
+                <div class="main-cta-group">
+                    <button class="btn btn-primary" id="btnRegister" onclick="submitRegistration()">
+                        🚀 Зарегистрировать в PUESC
+                    </button>
+                    <button class="btn btn-danger" id="btnDelete" onclick="submitDeletion()">
+                        🗑 Удалить из PUESC
+                    </button>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="clearDevicesTable()">🧹 Очистить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROGRESS BOX -->
+    <div class="progress-box" id="progressBox">
+        <div class="progress-text" id="progressText">
+            <div class="spinner"></div>
+            <span>Отправка документа в PUESC (SOAP AcceptDocument)...</span>
+        </div>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- CARD 3: РЕЗУЛЬТАТЫ И ВЫГРУЗКА -->
+    <div class="card" id="resultsCard" style="display: none;">
+        <div class="card-header">
+            <div class="card-title">📊 3. Результаты обработки в PUESC</div>
+            <div id="sysRefBadge" style="font-size: 12px; color: var(--text-muted);"></div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Всего устройств</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--accent-green);" id="statSuccess">0</div>
+                <div class="stat-label">Успешно получено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--primary);" id="statExisting">0</div>
+                <div class="stat-label">Ранее в базе</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--accent-red);" id="statErrors">0</div>
+                <div class="stat-label">Ошибки</div>
+            </div>
+        </div>
+
+        <!-- ТАБЛИЦА РЕЗУЛЬТАТОВ -->
+        <div class="table-container">
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 160px;">IMEI</th>
+                        <th style="width: 170px;">Номер локатора (ID)</th>
+                        <th style="width: 110px;">PIN-код</th>
+                        <th style="width: 100px;">Статус</th>
+                        <th>Дата регистрации</th>
+                        <th>Тип / Примечание</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- КНОПКИ СКАЧИВАНИЯ ОТЧЕТОВ -->
+        <div class="downloads-bar" id="downloadsBar">
+            <!-- Кнопки генерируются динамически -->
+        </div>
+    </div>
+
+    <!-- CARD 4: ИСТОРИЯ ВЫГРУЗОК -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">📂 История созданных отчетов</div>
+            <button class="btn btn-secondary btn-sm" onclick="loadHistory()">🔄 Обновить</button>
+        </div>
+        <div class="table-container" style="max-height: 200px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Имя файла</th>
+                        <th style="width: 120px;">Размер</th>
+                        <th style="width: 180px;">Дата изменения</th>
+                        <th class="cell-center" style="width: 110px;">Скачать</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-dim);">Загрузка истории...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST УВЕДОМЛЕНИЯ -->
+<div class="toast" id="toast"></div>
+
+<script>
+    let devices = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+        setupDropzone();
+        addImeisToList(['123456789', '864636068828181']);
+        loadHistory();
+    });
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.style.borderLeftColor = isError ? 'var(--accent-red)' : 'var(--primary)';
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    function setContractor(name) {
+        document.getElementById('contractorInput').value = name;
+        updateDevicesInfoWithContractor();
+    }
+
+    function updateDevicesInfoWithContractor() {
+        const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+        devices.forEach(d => {
+            if (!d.customInfo) {
+                d.info = `${contractor} ${d.imei}`;
+            }
+        });
+        renderDevicesTable();
+    }
+
+    function addImeisToList(imeiArray) {
+        const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+        imeiArray.forEach(rawImei => {
+            const imei = String(rawImei).trim().split(';')[0].trim();
+            if (imei && !devices.some(d => d.imei === imei)) {
+                devices.push({
+                    imei: imei,
+                    info: `${contractor} ${imei}`,
+                    customInfo: false,
+                    etoll: true,
+                    sent: true,
+                });
+            }
+        });
+        renderDevicesTable();
+    }
+
+    function renderDevicesTable() {
+        const tbody = document.getElementById('devicesTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('devicesCountBadge').innerText = devices.length;
+
+        if (devices.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Таблица пуста. Вставьте IMEI или перетащите файл.</td></tr>`;
+            return;
+        }
+
+        devices.forEach((d, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="cell-center" style="color: var(--text-dim); font-size: 11px;">${idx + 1}</td>
+                <td>
+                    <input type="text" value="${d.imei}" style="padding: 6px 8px; font-size: 13px;" onchange="updateRowImei(${idx}, this.value)">
+                </td>
+                <td>
+                    <input type="text" value="${d.info}" style="padding: 6px 8px; font-size: 13px;" onchange="updateRowInfo(${idx}, this.value)">
+                </td>
+                <td class="cell-center">
+                    <input type="checkbox" class="table-checkbox" ${d.etoll ? 'checked' : ''} onchange="toggleRowCheckbox(${idx}, 'etoll', this.checked)">
+                </td>
+                <td class="cell-center">
+                    <input type="checkbox" class="table-checkbox" ${d.sent ? 'checked' : ''} onchange="toggleRowCheckbox(${idx}, 'sent', this.checked)">
+                </td>
+                <td class="cell-center">
+                    <button class="btn-remove-row" onclick="removeRow(${idx})" title="Удалить строку">×</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateRowImei(idx, val) {
+        devices[idx].imei = val.trim();
+        if (!devices[idx].customInfo) {
+            const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+            devices[idx].info = `${contractor} ${devices[idx].imei}`;
+            renderDevicesTable();
+        }
+    }
+
+    function updateRowInfo(idx, val) {
+        devices[idx].info = val.trim();
+        devices[idx].customInfo = true;
+    }
+
+    function toggleRowCheckbox(idx, field, checked) {
+        devices[idx][field] = checked;
+    }
+
+    function removeRow(idx) {
+        devices.splice(idx, 1);
+        renderDevicesTable();
+    }
+
+    function addNewRow() {
+        const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+        devices.push({
+            imei: '',
+            info: `${contractor}`,
+            customInfo: false,
+            etoll: true,
+            sent: true,
+        });
+        renderDevicesTable();
+    }
+
+    function clearDevicesTable() {
+        devices = [];
+        renderDevicesTable();
+    }
+
+    function setAllCheckboxes(etollVal, sentVal) {
+        devices.forEach(d => {
+            d.etoll = etollVal;
+            d.sent = sentVal;
+        });
+        renderDevicesTable();
+        showToast(`Галки обновлены: e-TOLL (${etollVal ? 'ВКЛ' : 'ВЫКЛ'}), SENT (${sentVal ? 'ВКЛ' : 'ВЫКЛ'})`);
+    }
+
+    function importFromTextarea() {
+        const text = document.getElementById('quickImeiTextarea').value;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length === 0) {
+            showToast('Поле ввода пусто!', true);
+            return;
+        }
+        addImeisToList(lines);
+        document.getElementById('quickImeiTextarea').value = '';
+        showToast(`Добавлено ${lines.length} устройств в таблицу!`);
+    }
+
+    async function pasteFromClipboard() {
+        try {
+            const text = await navigator.clipboard.readText();
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            if (lines.length > 0) {
+                addImeisToList(lines);
+                showToast(`Вставлено ${lines.length} IMEI из буфера!`);
+            } else {
+                showToast('Буфер обмена пуст', true);
+            }
+        } catch (e) {
+            showToast('Не удалось прочитать буфер обмена. Вставьте вручную в поле ввода.', true);
+        }
+    }
+
+    function setupDropzone() {
+        const dropzone = document.getElementById('fileDropzone');
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+            });
+        });
+        dropzone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                readFile(files[0]);
+            }
+        });
+    }
+
+    function handleFileSelect(event) {
+        const files = event.target.files;
+        if (files.length > 0) {
+            readFile(files[0]);
+        }
+    }
+
+    function readFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target.result;
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            addImeisToList(lines);
+            showToast(`Файл "${file.name}" загружен (${lines.length} записей)!`);
+        };
+        reader.readAsText(file);
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast(`Скопировано: ${text}`);
+        });
+    }
+
+    // ОТПРАВКА НА РЕГИСТРАЦИЮ
+    async function submitRegistration() {
+        if (devices.length === 0) {
+            showToast('Таблица пуста. Добавьте хотя бы один IMEI!', true);
+            return;
+        }
+
+        const contractor = document.getElementById('contractorInput').value.trim() || 'MotoGuard';
+        const payload = {
+            contractor: contractor,
+            devices: devices.map(d => ({
+                imei: d.imei,
+                info: d.info,
+                etoll: d.etoll,
+                sent: d.sent,
+            }))
+        };
+
+        const progressBox = document.getElementById('progressBox');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const btnRegister = document.getElementById('btnRegister');
+
+        progressBox.style.display = 'flex';
+        progressBar.style.width = '30%';
+        progressText.innerHTML = '<div class="spinner"></div><span>[1/3] Формирование XML и отправка в PUESC...</span>';
+        btnRegister.disabled = true;
+
+        try {
+            progressBar.style.width = '60%';
+            progressText.innerHTML = '<div class="spinner"></div><span>[2/3] Документ принят. Ожидание ответа PUESC (ZSL_121 / ZSL_123)...</span>';
+
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            progressBar.style.width = '100%';
+
+            if (!data.success) {
+                progressBox.style.display = 'none';
+                showToast(`Ошибка: ${data.error}`, true);
+                btnRegister.disabled = false;
+                return;
+            }
+
+            progressText.innerHTML = '<span>✅ Готово! Результаты получены.</span>';
+            setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
+            renderResults(data);
+            loadHistory();
+            showToast('Регистрация успешно выполнена!');
+        } catch (err) {
+            progressBox.style.display = 'none';
+            showToast(`Сетевая ошибка: ${err.message}`, true);
+        } finally {
+            btnRegister.disabled = false;
+        }
+    }
+
+    // ОТПРАВКА НА УДАЛЕНИЕ
+    async function submitDeletion() {
+        if (devices.length === 0) {
+            showToast('Таблица пуста. Добавьте хотя бы один IMEI!', true);
+            return;
+        }
+
+        if (!confirm(`Вы действительно хотите удалить ${devices.length} устройств из PUESC?`)) {
+            return;
+        }
+
+        const imeis = devices.map(d => d.imei).filter(Boolean);
+        const progressBox = document.getElementById('progressBox');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        progressBox.style.display = 'flex';
+        progressBar.style.width = '40%';
+        progressText.innerHTML = '<div class="spinner"></div><span>Отправка запроса на удаление в PUESC...</span>';
+
+        try {
+            const response = await fetch('/api/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imeis: imeis })
+            });
+            const data = await response.json();
+            progressBar.style.width = '100%';
+
+            if (!data.success) {
+                progressBox.style.display = 'none';
+                showToast(`Ошибка: ${data.error}`, true);
+                return;
+            }
+
+            setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
+            renderDeletionResults(data);
+            loadHistory();
+            showToast('Запрос на удаление выполнен!');
+        } catch (err) {
+            progressBox.style.display = 'none';
+            showToast(`Сетевая ошибка: ${err.message}`, true);
+        }
+    }
+
+    function renderResults(data) {
+        const resultsCard = document.getElementById('resultsCard');
+        resultsCard.style.display = 'flex';
+
+        document.getElementById('sysRefBadge').innerText = data.sysRef ? `sysRef: ${data.sysRef}` : '';
+
+        const results = data.results || [];
+        const successCount = results.filter(r => r.success && !r.is_existing).length;
+        const existingCount = results.filter(r => r.is_existing).length;
+        const errorCount = results.filter(r => !r.success).length;
+
+        document.getElementById('statTotal').innerText = results.length;
+        document.getElementById('statSuccess').innerText = successCount;
+        document.getElementById('statExisting').innerText = existingCount;
+        document.getElementById('statErrors').innerText = errorCount;
+
+        const tbody = document.getElementById('resultsTableBody');
+        tbody.innerHTML = '';
+
+        results.forEach(r => {
+            const tr = document.createElement('tr');
+            const noteHtml = r.is_existing 
+                ? `<span style="color: #60a5fa; font-weight: 500;">(Ранее в базе)</span>`
+                : (r.success ? `<span style="color: #34d399; font-weight: 500;">(Новая регистрация)</span>` : `<span style="color: #f87171;">${r.error || 'Ошибка'}</span>`);
+
+            tr.innerHTML = `
+                <td style="font-weight: 600;">${r.imei}</td>
+                <td>
+                    ${r.locNum}
+                    ${r.locNum && r.locNum !== '-' ? `<button class="copy-btn" onclick="copyToClipboard('${r.locNum}')">📋</button>` : ''}
+                </td>
+                <td>
+                    <span style="font-family: monospace; font-weight: 600; color: #f59e0b;">${r.locPin}</span>
+                    ${r.locPin && r.locPin !== '-' ? `<button class="copy-btn" onclick="copyToClipboard('${r.locPin}')">📋</button>` : ''}
+                </td>
+                <td><span class="badge-status-0">0 Активен</span></td>
+                <td style="font-size: 12px; color: var(--text-muted);">${r.created || '-'}</td>
+                <td>${noteHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // КНОПКИ СКАЧИВАНИЯ
+        const downloadsBar = document.getElementById('downloadsBar');
+        downloadsBar.innerHTML = '';
+        if (data.files) {
+            if (data.files.txt) {
+                downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT отчет (${data.files.txt})</a>`;
+            }
+            if (data.files.csv) {
+                downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+            }
+            if (data.files.xml) {
+                downloadsBar.innerHTML += `<a href="/api/download/${data.files.xml}" class="btn btn-secondary btn-sm" download>💾 Скачать XML запрос</a>`;
+            }
+            if (data.files.response_xml) {
+                downloadsBar.innerHTML += `<a href="/api/download/${data.files.response_xml}" class="btn btn-secondary btn-sm" download>📥 Скачать XML ответ</a>`;
+            }
+        }
+    }
+
+    function renderDeletionResults(data) {
+        const resultsCard = document.getElementById('resultsCard');
+        resultsCard.style.display = 'flex';
+        document.getElementById('sysRefBadge').innerText = data.sysRef ? `sysRef: ${data.sysRef}` : '';
+
+        const results = data.results || [];
+        document.getElementById('statTotal').innerText = results.length;
+        document.getElementById('statSuccess').innerText = results.length;
+        document.getElementById('statExisting').innerText = 0;
+        document.getElementById('statErrors').innerText = 0;
+
+        const tbody = document.getElementById('resultsTableBody');
+        tbody.innerHTML = '';
+
+        results.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: 600;">${r.imei}</td>
+                <td>${r.locNum || '-'}</td>
+                <td>-</td>
+                <td><span class="badge-status-4">${r.status || '4 Удален'}</span></td>
+                <td>${new Date().toLocaleString()}</td>
+                <td><span style="color: #34d399;">${r.result}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const downloadsBar = document.getElementById('downloadsBar');
+        downloadsBar.innerHTML = '';
+        if (data.files) {
+            if (data.files.txt) {
+                downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT отчет (${data.files.txt})</a>`;
+            }
+            if (data.files.csv) {
+                downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+            }
+        }
+    }
+
+    async function loadHistory() {
+        try {
+            const res = await fetch('/api/history');
+            const data = await res.json();
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            if (!data.files || data.files.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">История отчетов пуста.</td></tr>`;
+                return;
+            }
+
+            data.files.forEach(f => {
+                const tr = document.createElement('tr');
+                const sizeKb = (f.size / 1024).toFixed(1);
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${f.name}</td>
+                    <td style="color: var(--text-muted); font-size: 12px;">${sizeKb} KB</td>
+                    <td style="color: var(--text-muted); font-size: 12px;">${f.mtime}</td>
+                    <td class="cell-center">
+                        <a href="/api/download/${f.name}" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;" download>📥 Скачать</a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error('Failed to load history', e);
+        }
+    }
+</script>
+
+</body>
+</html>

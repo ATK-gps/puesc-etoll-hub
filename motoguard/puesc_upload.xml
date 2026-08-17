@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns1:ZSL_120 xmlns:ns1="http://www.mf.gov.pl/SENT/2020/07/21/ZSL_120.xsd" xmlns:ns2="http://www.mf.gov.pl/SENT/2020/07/21/ZTypes.xsd">
+    <ns1:OBEServiceNumber>ZSL-GRNC-0</ns1:OBEServiceNumber>
+    <ns1:OBEOperatorIdentityType>INNY</ns1:OBEOperatorIdentityType>
+    <ns1:OBEOperatorIdentityNumber>BY291080284</ns1:OBEOperatorIdentityNumber>
+    <ns1:GPSDeviceToAdd>
+        <ns2:GPSDeviceID>112233445566778</ns2:GPSDeviceID>
+        <ns2:AdditionalInformation>MotoGuard 112233445566778</ns2:AdditionalInformation>
+    </ns1:GPSDeviceToAdd>
+    <ns1:ResponseWebService>
+        <ns2:UrlAddress>https://device-etoll.atkgps.pl/DocumentHandlingSvc</ns2:UrlAddress>
+        <ns2:UserName>zam@atk-gps.by</ns2:UserName>
+        <ns2:UserPassword>HFxqCHa6eC-+47x</ns2:UserPassword>
+        <ns2:CertificateFingerPrint>91f371717516763d8fd3d60091877e23059d90ce</ns2:CertificateFingerPrint>
+    </ns1:ResponseWebService>
+</ns1:ZSL_120>
