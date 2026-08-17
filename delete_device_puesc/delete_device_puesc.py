@@ -181,6 +181,10 @@ def send_document_to_puesc(xml_content: str, filename: str = "ZSL_120_delete.xml
     Возвращает кортеж (успех: bool, sysRef: str|None, raw_body: str).
     """
     try:
+        base_name = filename.rsplit(".", 1)[0]
+        ext = filename.rsplit(".", 1)[1] if "." in filename else "xml"
+        unique_fn = f"{base_name}_{uuid.uuid4().hex[:8]}.{ext}"
+
         creds = create_ws_security_credentials(PUESC_PASSWORD)
         content_b64 = base64.b64encode(xml_content.encode("utf-8")).decode("utf-8")
 
@@ -201,7 +205,7 @@ def send_document_to_puesc(xml_content: str, filename: str = "ZSL_120_delete.xml
     <soap-env:Body>
         <_v2:AcceptDocumentRequest xmlns:_v2="http://www.mf.gov.pl/uslugiBiznesowe/WsPull/Usluga/2014/01_v2_0">
             <_v21:document xmlns:_v21="http://www.mf.gov.pl/schematy/SISC/WsChannel/2014/01_v2_0">
-                <_v21:content filename='{filename}' mime="application/xml">{content_b64}</_v21:content>
+                <_v21:content filename='{unique_fn}' mime="application/xml">{content_b64}</_v21:content>
                 <_v21:targetSystems>
                     <_v21:system>SENT</_v21:system>
                 </_v21:targetSystems>

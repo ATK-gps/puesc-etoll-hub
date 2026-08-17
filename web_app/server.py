@@ -353,7 +353,9 @@ def create_puesc_registration_xml(devices: list):
     """
     Формирует XML ZSL_120 для добавления устройств.
     """
+    req_uid = uuid.uuid4().hex
     xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!-- RequestID: {req_uid} -->
 <ns1:ZSL_120 xmlns:ns1="http://www.mf.gov.pl/SENT/2020/07/21/ZSL_120.xsd" xmlns:ns2="http://www.mf.gov.pl/SENT/2020/07/21/ZTypes.xsd">
     <ns1:OBEServiceNumber>{OBE_SERVICE_NUMBER}</ns1:OBEServiceNumber>
     <ns1:OBEOperatorIdentityType>{OBE_OPERATOR_IDENTITY_TYPE}</ns1:OBEOperatorIdentityType>
@@ -381,7 +383,9 @@ def create_puesc_registration_xml(devices: list):
 
 def create_puesc_deletion_xml(imeis: list):
     """Формирует XML ZSL_120 для удаления устройств."""
+    req_uid = uuid.uuid4().hex
     xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!-- RequestID: {req_uid} -->
 <ns1:ZSL_120 xmlns:ns1="http://www.mf.gov.pl/SENT/2020/07/21/ZSL_120.xsd" xmlns:ns2="http://www.mf.gov.pl/SENT/2020/07/21/ZTypes.xsd">
     <ns1:OBEServiceNumber>{OBE_SERVICE_NUMBER}</ns1:OBEServiceNumber>
     <ns1:OBEOperatorIdentityType>{OBE_OPERATOR_IDENTITY_TYPE}</ns1:OBEOperatorIdentityType>
@@ -405,7 +409,9 @@ def create_puesc_deletion_xml(imeis: list):
 
 def create_zsl122_query_xml(imei: str):
     """Формирует XML ZSL_122 для поиска/проверки статуса устройства."""
+    req_uid = uuid.uuid4().hex
     return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!-- RequestID: {req_uid} -->
 <ns1:ZSL_122 xmlns:ns1="http://www.mf.gov.pl/SENT/2020/07/21/ZSL_122.xsd" xmlns:ns2="http://www.mf.gov.pl/SENT/2020/07/21/ZTypes.xsd">
     <ns1:OBEOperatorIdentityType>{OBE_OPERATOR_IDENTITY_TYPE}</ns1:OBEOperatorIdentityType>
     <ns1:OBEOperatorIdentityNumber>{OBE_OPERATOR_IDENTITY_NUMBER}</ns1:OBEOperatorIdentityNumber>
@@ -433,6 +439,11 @@ def create_zsl122_query_xml(imei: str):
 def send_soap_to_puesc(xml_content: str, filename: str = "document.xml"):
     """Синхронная отправка SOAP AcceptDocumentRequest в PUESC."""
     try:
+        # Обеспечиваем уникальность имени файла, чтобы PUESC не отвергал дубликаты
+        base_name = filename.rsplit(".", 1)[0]
+        ext = filename.rsplit(".", 1)[1] if "." in filename else "xml"
+        unique_fn = f"{base_name}_{uuid.uuid4().hex[:8]}.{ext}"
+
         creds = create_ws_security_credentials(PUESC_PASSWORD)
         content_b64 = base64.b64encode(xml_content.encode("utf-8")).decode("utf-8")
 
@@ -453,7 +464,7 @@ def send_soap_to_puesc(xml_content: str, filename: str = "document.xml"):
     <soap-env:Body>
         <_v2:AcceptDocumentRequest xmlns:_v2="http://www.mf.gov.pl/uslugiBiznesowe/WsPull/Usluga/2014/01_v2_0">
             <_v21:document xmlns:_v21="http://www.mf.gov.pl/schematy/SISC/WsChannel/2014/01_v2_0">
-                <_v21:content filename='{filename}' mime="application/xml">{content_b64}</_v21:content>
+                <_v21:content filename='{unique_fn}' mime="application/xml">{content_b64}</_v21:content>
                 <_v21:targetSystems>
                     <_v21:system>SENT</_v21:system>
                 </_v21:targetSystems>
@@ -579,7 +590,7 @@ def parse_obe_devices_data(doc_root, target_imeis: set = None):
     return best_results
 
 
-def query_single_device_info(imei: str, max_wait_sec: int = 5):
+def query_single_device_info(imei: str, max_wait_sec: int = 10):
     """Поиск данных конкретного устройства через ZSL_122 с точным выбором активной записи."""
     clean_imei = str(imei).strip()
     if len(clean_imei) < 6:
@@ -687,12 +698,15 @@ async def process_registration_request(contractor: str, devices_data: list):
             break
         await asyncio.sleep(1.5)
 
-    # 4. Если устройство уже было в базе и активно (или ZSL_121 не успел прийти), запрашиваем через ZSL_122
-    missing_imeis = [m for m in (target_imeis - set(found_devices.keys()) - {e['deviceId'] for e in found_errors}) if len(m) >= 6]
-    for m_imei in missing_imeis:
-        existing_info = await loop.run_in_executor(None, query_single_device_info, m_imei, 5)
+    # 4. Для всех устройств, которые не зарегистрированы как новые (включая "уже в базе"),
+    # запрашиваем актуальный активный статус в PUESC через ZSL_122
+    check_imeis = [m for m in (target_imeis - set(found_devices.keys())) if len(m) >= 6]
+    for m_imei in check_imeis:
+        existing_info = await loop.run_in_executor(None, query_single_device_info, m_imei, 10)
         if existing_info and str(existing_info.get("status", "")).strip() == "0":
             found_devices[m_imei] = existing_info
+            # Убираем из ошибок, так как устройство найдено активным в базе PUESC
+            found_errors = [e for e in found_errors if e.get("deviceId") != m_imei]
 
     # 5. Сохраняем сырой ответ
     if raw_response_xml:

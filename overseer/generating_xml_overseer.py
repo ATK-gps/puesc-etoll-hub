@@ -180,6 +180,10 @@ def send_document_to_puesc(xml_content: str, filename: str = "ZSL_120.xml"):
     Оборачивает XML документ в SOAP-пакет AcceptDocumentRequest и отправляет на PUESC.
     Возвращает кортеж (успех: bool, sysRef: str|None, raw_body: str).
     """
+    base_name = filename.rsplit(".", 1)[0]
+    ext = filename.rsplit(".", 1)[1] if "." in filename else "xml"
+    unique_fn = f"{base_name}_{uuid.uuid4().hex[:8]}.{ext}"
+
     creds = create_ws_security_credentials(PUESC_PASSWORD)
     content_b64 = base64.b64encode(xml_content.encode("utf-8")).decode("utf-8")
 
@@ -200,7 +204,7 @@ def send_document_to_puesc(xml_content: str, filename: str = "ZSL_120.xml"):
     <soap-env:Body>
         <_v2:AcceptDocumentRequest xmlns:_v2="http://www.mf.gov.pl/uslugiBiznesowe/WsPull/Usluga/2014/01_v2_0">
             <_v21:document xmlns:_v21="http://www.mf.gov.pl/schematy/SISC/WsChannel/2014/01_v2_0">
-                <_v21:content filename='{filename}' mime="application/xml">{content_b64}</_v21:content>
+                <_v21:content filename='{unique_fn}' mime="application/xml">{content_b64}</_v21:content>
                 <_v21:targetSystems>
                     <_v21:system>SENT</_v21:system>
                 </_v21:targetSystems>
@@ -426,13 +430,16 @@ def wait_and_fetch_target_response(target_imeis: set, response_xml_path: Path, m
         print(f"   ⏳ Ожидание генерации ответа PUESC... ({elapsed}/{max_wait_sec} сек.)")
         time.sleep(poll_interval)
 
-    # Если часть устройств не вернулась в ZSL_121 (так как они уже были внесены ранее),
+    # Если часть устройств не вернулась в DevicesRegistered (так как они уже были внесены ранее),
     # опрашиваем PUESC напрямую через ZSL_122
-    missing_imeis = target_imeis - set(found_devices.keys()) - {e['deviceId'] for e in found_errors}
-    if missing_imeis:
-        print(f"\nℹ Устройства {', '.join(missing_imeis)} уже были внесены ранее. Запрос их действующих реквизитов...")
-        existing_info = query_existing_devices_info(missing_imeis)
-        found_devices.update(existing_info)
+    check_imeis = target_imeis - set(found_devices.keys())
+    if check_imeis:
+        print(f"\nℹ Проверка действующих реквизитов в PUESC для устройств: {', '.join(check_imeis)}...")
+        existing_info = query_existing_devices(check_imeis)
+        for imei, info in existing_info.items():
+            if str(info.get("status", "")).strip() == "0":
+                found_devices[imei] = info
+                found_errors = [e for e in found_errors if e.get("deviceId") != imei]
 
     return found_devices, found_errors
 
