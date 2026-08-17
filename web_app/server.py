@@ -106,8 +106,10 @@ def get_or_create_flespi_device(imei: str, contractor: str):
         "Content-Type": "application/json",
     }
 
-    # 1. Поиск по ident (IMEI)
-    search_url = f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={clean_imei}"
+    # 1. Поиск по ident (IMEI) через селектор Flespi
+    import urllib.parse
+    selector = urllib.parse.quote(f'{{configuration.ident=="{clean_imei}"}}')
+    search_url = f"{FLESPI_BASE_URL}/devices/{selector}"
     req = urllib.request.Request(search_url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
@@ -120,13 +122,13 @@ def get_or_create_flespi_device(imei: str, contractor: str):
 
     # 2. Создание, если устройства нет
     if "overseer" in clean_c:
-        name = f"overseer {imei}"
+        name = f"overseer {clean_imei}"
         dev_type = 14
-        config = {"ident": imei}
+        config = {"ident": clean_imei}
     else:
-        name = f"Motoguard {imei}"
+        name = f"Motoguard {clean_imei}"
         dev_type = 22
-        config = {"ident": imei, "settings_polling": "once"}
+        config = {"ident": clean_imei, "settings_polling": "once"}
 
     payload = [{
         "name": name,

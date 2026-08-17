@@ -435,16 +435,22 @@ FLESPI_GROUP_MOTOGUARD_ETOLL = 247707  # "MotoGuard e-toll"
 
 def sync_motoguard_flespi(imei: str):
     """Создает устройство в Flespi и добавляет в группу MotoGuard e-toll."""
+    clean_imei = str(imei).strip()
+    if len(clean_imei) < 6:
+        return False, None
+
+    import urllib.parse
     headers = {
         "Authorization": f"FlespiToken {FLESPI_TOKEN}",
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
     dev_id = None
-    # 1. Поиск
+    # 1. Поиск по селектору
     try:
-        req = urllib.request.Request(f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={imei}", headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        selector = urllib.parse.quote(f'{{configuration.ident=="{clean_imei}"}}')
+        req = urllib.request.Request(f"{FLESPI_BASE_URL}/devices/{selector}", headers=headers)
+        with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             if data.get("result"):
                 dev_id = data["result"][0]["id"]
@@ -454,9 +460,9 @@ def sync_motoguard_flespi(imei: str):
     # 2. Создание
     if not dev_id:
         try:
-            payload = [{"name": f"Motoguard {imei}", "device_type_id": 22, "messages_ttl": 1209600, "configuration": {"ident": imei, "settings_polling": "once"}}]
+            payload = [{"name": f"Motoguard {clean_imei}", "device_type_id": 22, "messages_ttl": 1209600, "configuration": {"ident": clean_imei, "settings_polling": "once"}}]
             req = urllib.request.Request(f"{FLESPI_BASE_URL}/devices", data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 if data.get("result"):
                     dev_id = data["result"][0]["id"]
@@ -467,7 +473,7 @@ def sync_motoguard_flespi(imei: str):
     if dev_id:
         try:
             req = urllib.request.Request(f"{FLESPI_BASE_URL}/groups/{FLESPI_GROUP_MOTOGUARD_ETOLL}/devices/{dev_id}", headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
                 return True, dev_id
         except Exception:
             pass
