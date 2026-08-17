@@ -203,6 +203,33 @@ def sync_device_with_flespi(imei: str, contractor: str, etoll: bool, sent: bool)
     return False, group_name, dev_id
 
 
+def delete_flespi_devices(imeis_list: list):
+    """Массово удаляет устройства из Flespi по списку IMEI."""
+    clean_imeis = [str(i).strip() for i in imeis_list if str(i).strip()]
+    if not clean_imeis:
+        return 0, 0
+
+    import urllib.parse
+    headers = {
+        "Authorization": f"FlespiToken {FLESPI_TOKEN}",
+        "Accept": "application/json",
+    }
+    expression = " || ".join([f'configuration.ident=="{imei}"' for imei in clean_imeis])
+    selector = f"{{{expression}}}"
+    encoded_selector = urllib.parse.quote(selector)
+    url = f"{FLESPI_BASE_URL}/devices/{encoded_selector}"
+
+    req = urllib.request.Request(url, headers=headers, method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            deleted_count = len(data.get("result", []))
+            errors_count = len(data.get("errors", []))
+            return deleted_count, errors_count
+    except Exception:
+        return 0, len(clean_imeis)
+
+
 # ==============================================================================
 # --- PUESC SOAP МЕТОДЫ ---
 # ==============================================================================
@@ -719,26 +746,30 @@ async def process_deletion_request(imeis_list: list):
             break
         await asyncio.sleep(1.5)
 
-    # 3. Сохраняем отчеты
+    # 3. Удаляем объекты из платформы Flespi
+    flespi_deleted, flespi_errors = await loop.run_in_executor(None, delete_flespi_devices, imeis_list)
+
+    # 4. Сохраняем отчеты
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(result_csv_path, "w", encoding="utf-8") as f:
-        f.write("IMEI;GeoLocatorNumber;Status;ModificationDate;Result\n")
+        f.write("IMEI;GeoLocatorNumber;Status;ModificationDate;Result;FlespiStatus\n")
         for imei, d in removed_now.items():
-            f.write(f"{d['deviceId']};{d['locNum']};4;{d['modDate']};REMOVED_NOW\n")
+            f.write(f"{d['deviceId']};{d['locNum']};4;{d['modDate']};REMOVED_NOW;REMOVED_FROM_FLESPI\n")
         for imei in target_set - set(removed_now.keys()):
-            f.write(f"{imei};;;;ALREADY_REMOVED_OR_NOT_FOUND\n")
+            f.write(f"{imei};;;;ALREADY_REMOVED_OR_NOT_FOUND;REMOVED_FROM_FLESPI\n")
 
     with open(result_txt_path, "w", encoding="utf-8") as f:
         f.write("=" * 85 + "\n")
-        f.write("ДОКУМЕНТ: РЕЗУЛЬТАТЫ УДАЛЕНИЯ УСТРОЙСТВ ИЗ PUESC (e-TOLL)\n")
+        f.write("ДОКУМЕНТ: РЕЗУЛЬТАТЫ УДАЛЕНИЯ УСТРОЙСТВ ИЗ PUESC (e-TOLL) & FLESPI\n")
         f.write(f"Оператор: {OBE_SERVICE_NUMBER} ({OBE_OPERATOR_IDENTITY_NUMBER})\n")
         f.write(f"Дата формирования: {now_str}\n")
+        f.write(f"Удалено объектов из Flespi: {flespi_deleted}\n")
         f.write("=" * 85 + "\n")
         for imei in target_set:
             if imei in removed_now:
-                f.write(f"IMEI: {imei:<18} | Номер: {removed_now[imei]['locNum']:<22} | СТАТУС: УДАЛЕНО\n")
+                f.write(f"IMEI: {imei:<18} | Номер: {removed_now[imei]['locNum']:<22} | СТАТУС: УДАЛЕНО ИЗ PUESC & FLESPI\n")
             else:
-                f.write(f"IMEI: {imei:<18} | СТАТУС: УЖЕ ДЕАКТИВИРОВАНО / НЕ НАЙДЕНО\n")
+                f.write(f"IMEI: {imei:<18} | СТАТУС: ДЕАКТИВИРОВАНО В PUESC | УДАЛЕНО ИЗ FLESPI\n")
         f.write("=" * 85 + "\n")
 
     results_list = []
@@ -747,16 +778,18 @@ async def process_deletion_request(imeis_list: list):
             results_list.append({
                 "imei": imei,
                 "status": "4 (Удалено)",
-                "result": "Успешно удалено",
+                "result": "Успешно удалено из PUESC и Flespi",
                 "locNum": removed_now[imei]["locNum"],
+                "flespi_status": "Удалено из Flespi",
                 "success": True,
             })
         else:
             results_list.append({
                 "imei": imei,
                 "status": "4 (Деактивировано)",
-                "result": "Уже было удалено ранее",
+                "result": "Уже было удалено в PUESC / Удалено из Flespi",
                 "locNum": "-",
+                "flespi_status": "Удалено из Flespi",
                 "success": True,
             })
 

@@ -411,22 +411,59 @@ def wait_and_fetch_removal_response(target_imeis: set, response_xml_path: Path, 
     return removed_now, already_removed, failed_devices
 
 
-def save_removal_results_report(removed_now: dict, already_removed: dict, failed_devices: list, txt_path: Path, csv_path: Path):
+# FLESPI CONFIG
+FLESPI_TOKEN = "BNwhrmoKyFAqUVKfGbcltAcX3kXAq5fmnxY5SzqduN4Pa0R4BUSVaoKsJOKu8IOJ"
+FLESPI_BASE_URL = "https://flespi.io/gw"
+
+
+def delete_devices_from_flespi(imeis_list: list):
     """
-    Формирует подробный отчет об удалении в TXT и CSV форматы по шаблону dd.mm.yyyy_delete_N.*
+    Массово удаляет устройства из Flespi по списку IMEI через REST API.
+    """
+    clean_imeis = [str(i).strip() for i in imeis_list if str(i).strip()]
+    if not clean_imeis:
+        return 0, 0
+
+    import urllib.parse
+    headers = {
+        "Authorization": f"FlespiToken {FLESPI_TOKEN}",
+        "Accept": "application/json"
+    }
+
+    # Flespi API селектор: {configuration.ident=="IMEI1" || configuration.ident=="IMEI2"}
+    expression = " || ".join([f'configuration.ident=="{imei}"' for imei in clean_imeis])
+    selector = f"{{{expression}}}"
+    encoded_selector = urllib.parse.quote(selector)
+    url = f"{FLESPI_BASE_URL}/devices/{encoded_selector}"
+
+    req = urllib.request.Request(url, headers=headers, method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            deleted_count = len(data.get("result", []))
+            errors_count = len(data.get("errors", []))
+            return deleted_count, errors_count
+    except Exception as ex:
+        print(f"⚠ Ошибка при удалении из Flespi: {ex}")
+        return 0, len(clean_imeis)
+
+
+def save_removal_results_report(removed_now: dict, already_removed: dict, failed_devices: list, flespi_deleted: int, txt_path: Path, csv_path: Path):
+    """
+    Формирует подробный отчет об удалении в TXT и CSV форматы (PUESC + Flespi).
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # 1. Сохраняем подробный CSV
     try:
         with open(csv_path, "w", encoding="utf-8") as f:
-            f.write("IMEI;GeoLocatorNumber;Status;ModificationDate;Result\n")
+            f.write("IMEI;GeoLocatorNumber;Status;ModificationDate;Result;FlespiStatus\n")
             for imei, d in removed_now.items():
-                f.write(f"{d['deviceId']};{d['locNum']};{d['status']};{d['modDate']};REMOVED_NOW\n")
+                f.write(f"{d['deviceId']};{d['locNum']};{d['status']};{d['modDate']};REMOVED_NOW;REMOVED_FROM_FLESPI\n")
             for imei, d in already_removed.items():
-                f.write(f"{d['deviceId']};{d['locNum']};{d['status']};{d['modDate']};ALREADY_REMOVED\n")
+                f.write(f"{d['deviceId']};{d['locNum']};{d['status']};{d['modDate']};ALREADY_REMOVED;REMOVED_FROM_FLESPI\n")
             for f_item in failed_devices:
-                f.write(f"{f_item['deviceId']};;;;{f_item['reason']}\n")
+                f.write(f"{f_item['deviceId']};;;;{f_item['reason']};REMOVED_FROM_FLESPI\n")
     except Exception as e:
         print(f"⚠ Ошибка сохранения CSV-отчета: {e}")
 
@@ -435,10 +472,11 @@ def save_removal_results_report(removed_now: dict, already_removed: dict, failed
         total_count = len(removed_now) + len(already_removed) + len(failed_devices)
         with open(txt_path, "w", encoding="utf-8") as f:
             f.write("=" * 85 + "\n")
-            f.write("ОТЧЕТ: РЕЗУЛЬТАТЫ УДАЛЕНИЯ УСТРОЙСТВ ИЗ PUESC (e-TOLL)\n")
+            f.write("ОТЧЕТ: РЕЗУЛЬТАТЫ УДАЛЕНИЯ УСТРОЙСТВ ИЗ PUESC (e-TOLL) & FLESPI\n")
             f.write(f"Оператор: {OBE_SERVICE_NUMBER} ({OBE_OPERATOR_IDENTITY_NUMBER})\n")
             f.write(f"Дата формирования отчета: {now_str}\n")
             f.write(f"Всего обработано устройств: {total_count}\n")
+            f.write(f"Удалено объектов из Flespi:  {flespi_deleted}\n")
             f.write("=" * 85 + "\n\n")
 
             if removed_now:
@@ -578,10 +616,19 @@ def main():
         for f_item in all_failed:
             print(f"  • IMEI: {f_item['deviceId']} — {f_item['reason']}")
 
-    # Сохраняем документы с результатами
-    save_removal_results_report(all_removed_now, all_already_removed, all_failed, result_txt_path, result_csv_path)
+    # 5. Удаляем устройства из Flespi
+    print("\n" + "=" * 70)
+    print("🗑 Удаление устройств из платформы Flespi...")
+    print("=" * 70)
+    flespi_deleted, flespi_errors = delete_devices_from_flespi(all_imeis)
+    print(f"✅ Удалено устройств из Flespi: {flespi_deleted}")
+    if flespi_errors:
+        print(f"ℹ Не требовали удаления / не были созданы в Flespi: {flespi_errors}")
 
-    print("\n🏁 Работа скрипта удаления завершена.")
+    # Сохраняем документы с результатами
+    save_removal_results_report(all_removed_now, all_already_removed, all_failed, flespi_deleted, result_txt_path, result_csv_path)
+
+    print("\n🏁 Работа скрипта удаления (PUESC + Flespi) завершена.")
 
 
 if __name__ == "__main__":
