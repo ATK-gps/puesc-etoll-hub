@@ -630,12 +630,10 @@
 
             <div class="form-group">
                 <label>Наименование контрагента:</label>
-                <input type="text" id="contractorInput" placeholder="Например: ATK-GPS, MotoGuard, Overseer" value="ATK-GPS" oninput="updateDevicesInfoWithContractor()">
+                <input type="text" id="contractorInput" placeholder="Например: MotoGuard, Overseer" value="MotoGuard" oninput="updateDevicesInfoWithContractor()">
                 <div class="chips-row">
-                    <span class="chip" onclick="setContractor('ATK-GPS')">ATK-GPS</span>
                     <span class="chip" onclick="setContractor('MotoGuard')">MotoGuard</span>
                     <span class="chip" onclick="setContractor('Overseer')">Overseer</span>
-                    <span class="chip" onclick="setContractor('ТрансЛогистик')">ТрансЛогистик</span>
                 </div>
             </div>
 
@@ -861,7 +859,6 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         setupDropzone();
-        addImeisToList(['864636068828181', '357544374994032']);
         loadHistory();
     });
 
