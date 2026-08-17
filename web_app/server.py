@@ -106,7 +106,7 @@ def get_or_create_flespi_device(imei: str, contractor: str):
     search_url = f"{FLESPI_BASE_URL}/devices/all?filter=configuration.ident=={imei}"
     req = urllib.request.Request(search_url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             results = data.get("result", [])
             if results:
@@ -138,7 +138,7 @@ def get_or_create_flespi_device(imei: str, contractor: str):
         method="POST"
     )
     try:
-        with urllib.request.urlopen(create_req, timeout=10) as resp:
+        with urllib.request.urlopen(create_req, timeout=10, context=get_ssl_context()) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             results = data.get("result", [])
             if results:
@@ -160,7 +160,7 @@ def add_device_to_flespi_group(group_id: int, device_id: int):
     url = f"{FLESPI_BASE_URL}/groups/{group_id}/devices/{device_id}"
     req = urllib.request.Request(url, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as resp:
             return True
     except Exception:
         return False
@@ -221,13 +221,96 @@ def delete_flespi_devices(imeis_list: list):
 
     req = urllib.request.Request(url, headers=headers, method="DELETE")
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=20, context=get_ssl_context()) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             deleted_count = len(data.get("result", []))
             errors_count = len(data.get("errors", []))
             return deleted_count, errors_count
     except Exception:
         return 0, len(clean_imeis)
+
+
+def fetch_and_convert_motoguard_activity():
+    """
+    Запрашивает из Flespi устройства MotoGuard (name, last_active),
+    конвертирует время (timestamp -> readable UTC / Nigdy) по правилам motoguard_convert.py
+    и сохраняет структурированные файлы JSON, CSV, TXT.
+    """
+    import urllib.parse
+    headers = {
+        "Authorization": f"FlespiToken {FLESPI_TOKEN}",
+        "Accept": "application/json",
+    }
+    selector = urllib.parse.quote('{name~"*motoguard*"}')
+    url = f"{FLESPI_BASE_URL}/devices/{selector}?fields=name,last_active"
+    req = urllib.request.Request(url, headers=headers)
+
+    with urllib.request.urlopen(req, timeout=25, context=get_ssl_context()) as resp:
+        raw_data = json.loads(resp.read().decode("utf-8"))
+        source_list = raw_data.get("result", [])
+
+    processed_list = []
+    active_count = 0
+    never_count = 0
+
+    for item in source_list:
+        name = item.get("name", "Unknown")
+        timestamp = item.get("last_active", 0)
+        if not timestamp or timestamp == 0:
+            readable_time = "Nigdy"
+            never_count += 1
+        else:
+            readable_time = datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            active_count += 1
+        processed_list.append({
+            "name": name,
+            "last_active": readable_time,
+        })
+
+    today_str = datetime.now().strftime("%d.%m.%Y")
+    run_idx = get_daily_run_index(REPORTS_DIR, "motoguard_activity")
+    file_prefix = f"{today_str}_motoguard_activity_{run_idx}"
+
+    json_path = REPORTS_DIR / f"{file_prefix}.json"
+    csv_path = REPORTS_DIR / f"{file_prefix}.csv"
+    txt_path = REPORTS_DIR / f"{file_prefix}.txt"
+
+    # 1. JSON
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump({"result": processed_list}, f, indent=2, ensure_ascii=False)
+
+    # 2. CSV
+    with open(csv_path, "w", encoding="utf-8") as f:
+        f.write("Name;LastActive\n")
+        for item in processed_list:
+            f.write(f"{item['name']};{item['last_active']}\n")
+
+    # 3. TXT
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(txt_path, "w", encoding="utf-8") as f:
+        f.write("=" * 70 + "\n")
+        f.write("ОТЧЕТ: АКТИВНОСТЬ УСТРОЙСТВ MOTOGUARD В ПЛАТФОРМЕ FLESPI\n")
+        f.write(f"Дата формирования: {now_str}\n")
+        f.write(f"Всего устройств: {len(processed_list)} (Активны: {active_count}, Никогда: {never_count})\n")
+        f.write("=" * 70 + "\n")
+        f.write(f"{'Название устройства':<40} | {'Последняя активность'}\n")
+        f.write("-" * 70 + "\n")
+        for item in processed_list:
+            f.write(f"{item['name']:<40} | {item['last_active']}\n")
+        f.write("=" * 70 + "\n")
+
+    return {
+        "success": True,
+        "count": len(processed_list),
+        "active_count": active_count,
+        "never_count": never_count,
+        "devices": processed_list,
+        "files": {
+            "json": json_path.name,
+            "csv": csv_path.name,
+            "txt": txt_path.name,
+        }
+    }
 
 
 # ==============================================================================
@@ -882,6 +965,16 @@ async def handle_api_status(request):
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
 
+async def handle_api_motoguard_activity(request):
+    """API эндпоинт для запроса и конвертации активности MotoGuard из Flespi."""
+    try:
+        loop = asyncio.get_event_loop()
+        res = await loop.run_in_executor(None, fetch_and_convert_motoguard_activity)
+        return web.json_response(res)
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
 async def handle_api_download(request):
     """Скачивание сформированного файла отчета."""
     filename = request.match_info.get("filename")
@@ -913,6 +1006,8 @@ def init_app():
     app.router.add_post("/api/register", handle_api_register)
     app.router.add_post("/api/delete", handle_api_delete)
     app.router.add_post("/api/status", handle_api_status)
+    app.router.add_get("/api/flespi/motoguard_activity", handle_api_motoguard_activity)
+    app.router.add_post("/api/flespi/motoguard_activity", handle_api_motoguard_activity)
     app.router.add_get("/api/download/{filename}", handle_api_download)
     app.router.add_get("/api/history", handle_api_history)
     app.router.add_static("/static/", path=str(STATIC_DIR), name="static")

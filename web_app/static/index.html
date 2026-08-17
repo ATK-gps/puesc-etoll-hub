@@ -771,7 +771,65 @@
         </div>
     </div>
 
-    <!-- CARD 4: ИСТОРИЯ ВЫГРУЗОК -->
+    <!-- CARD 4: АКТИВНОСТЬ MOTOGUARD ВО FLESPI -->
+    <div class="card" id="motoguardActivityCard">
+        <div class="card-header">
+            <div class="card-title">
+                📡 Выгрузка активности MotoGuard (Flespi)
+                <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); font-size: 11px;">motoguard_convert.py</span>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnFetchMotoguard" onclick="fetchMotoguardActivity()">
+                ⚡ Запросить активность из Flespi
+            </button>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+            Выполняет запрос во Flespi (<code style="color: #a78bfa;">{name~"*motoguard*"}</code>), извлекает <code style="color: #a78bfa;">name</code> и <code style="color: #a78bfa;">last_active</code>, конвертирует timestamp в читаемую UTC дату (или <em>Nigdy</em>) и формирует готовые файлы для скачивания.
+        </div>
+
+        <!-- СТАТИСТИКА MOTOGUARD -->
+        <div class="stats-grid" id="motoStatsGrid" style="display: none; margin-bottom: 14px;">
+            <div class="stat-card">
+                <div class="stat-value" id="motoStatTotal">0</div>
+                <div class="stat-label">Всего устройств</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--accent-green);" id="motoStatActive">0</div>
+                <div class="stat-label">Были активны</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--text-muted);" id="motoStatNever">0</div>
+                <div class="stat-label">Никогда (Nigdy)</div>
+            </div>
+        </div>
+
+        <!-- КНОПКИ СКАЧИВАНИЯ MOTOGUARD -->
+        <div class="downloads-bar" id="motoDownloadsBar" style="display: none; margin-bottom: 14px;">
+        </div>
+
+        <!-- ПОИСК И ПРЕВЬЮ ТАБЛИЦА -->
+        <div id="motoTableWrapper" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <input type="text" id="motoSearchInput" placeholder="🔍 Быстрый поиск по названию или IMEI..." style="max-width: 350px; padding: 6px 12px; font-size: 13px;" oninput="filterMotoTable()">
+                <div id="motoFilteredCount" style="font-size: 12px; color: var(--text-dim);"></div>
+            </div>
+            <div class="table-container" style="max-height: 280px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;" class="cell-center">#</th>
+                            <th>Название устройства (Name)</th>
+                            <th style="width: 220px;">Последняя активность (UTC)</th>
+                            <th style="width: 140px;" class="cell-center">Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="motoTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARD 5: ИСТОРИЯ ВЫГРУЗОК -->
     <div class="card">
         <div class="card-header">
             <div class="card-title">📂 История созданных отчетов</div>
@@ -1241,6 +1299,106 @@
         } catch (e) {
             console.error('Failed to load history', e);
         }
+    }
+
+    let motoguardDevicesList = [];
+
+    async function fetchMotoguardActivity() {
+        const btn = document.getElementById('btnFetchMotoguard');
+        const statsGrid = document.getElementById('motoStatsGrid');
+        const downloadsBar = document.getElementById('motoDownloadsBar');
+        const tableWrapper = document.getElementById('motoTableWrapper');
+
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Запрос данных из Flespi...';
+
+        try {
+            const res = await fetch('/api/flespi/motoguard_activity');
+            const data = await res.json();
+
+            if (!data.success) {
+                showToast(`Ошибка запроса: ${data.error}`, true);
+                return;
+            }
+
+            motoguardDevicesList = data.devices || [];
+
+            document.getElementById('motoStatTotal').innerText = data.count;
+            document.getElementById('motoStatActive').innerText = data.active_count;
+            document.getElementById('motoStatNever').innerText = data.never_count;
+
+            statsGrid.style.display = 'grid';
+            tableWrapper.style.display = 'block';
+
+            // Downloads buttons
+            downloadsBar.innerHTML = '';
+            if (data.files) {
+                if (data.files.json) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.json}" class="btn btn-primary btn-sm" download>💾 Скачать JSON (${data.files.json})</a>`;
+                }
+                if (data.files.csv) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+                }
+                if (data.files.txt) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT (${data.files.txt})</a>`;
+                }
+            }
+            downloadsBar.style.display = 'flex';
+
+            renderMotoTable(motoguardDevicesList);
+            loadHistory();
+            showToast(`Успешно получено ${data.count} устройств MotoGuard из Flespi!`);
+        } catch (err) {
+            showToast(`Ошибка подключения: ${err.message}`, true);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '⚡ Запросить активность из Flespi';
+        }
+    }
+
+    function renderMotoTable(list) {
+        const tbody = document.getElementById('motoTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('motoFilteredCount').innerText = `Показано: ${list.length} из ${motoguardDevicesList.length}`;
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 16px;">Устройства не найдены.</td></tr>`;
+            return;
+        }
+
+        list.forEach((item, idx) => {
+            const tr = document.createElement('tr');
+            const isNever = item.last_active === 'Nigdy';
+            const statusBadge = isNever
+                ? `<span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">⚪ Не активен</span>`
+                : `<span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">🟢 Активен</span>`;
+
+            tr.innerHTML = `
+                <td class="cell-center" style="color: var(--text-dim); font-size: 11px;">${idx + 1}</td>
+                <td style="font-weight: 600;">
+                    ${item.name}
+                    <button class="copy-btn" onclick="copyToClipboard('${item.name}')" title="Скопировать имя">📋</button>
+                </td>
+                <td style="font-family: monospace; font-size: 12px; color: ${isNever ? 'var(--text-dim)' : '#60a5fa'};">
+                    ${item.last_active}
+                </td>
+                <td class="cell-center">${statusBadge}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterMotoTable() {
+        const query = document.getElementById('motoSearchInput').value.trim().toLowerCase();
+        if (!query) {
+            renderMotoTable(motoguardDevicesList);
+            return;
+        }
+        const filtered = motoguardDevicesList.filter(d => 
+            (d.name && d.name.toLowerCase().includes(query)) ||
+            (d.last_active && d.last_active.toLowerCase().includes(query))
+        );
+        renderMotoTable(filtered);
     }
 </script>
 
