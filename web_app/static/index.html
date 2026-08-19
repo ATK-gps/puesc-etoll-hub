@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PUESC e-TOLL & SENT Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-body: #0a0d14;
@@ -38,7 +40,7 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-body);
-            background-image: 
+            background-image:
                 radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
                 radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
             color: var(--text-main);
@@ -137,8 +139,17 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.85); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.85);
+            }
         }
 
         /* GRID LAYOUT */
@@ -197,7 +208,8 @@
             color: var(--text-muted);
         }
 
-        input[type="text"], textarea {
+        input[type="text"],
+        textarea {
             width: 100%;
             background: rgba(10, 14, 23, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -210,7 +222,8 @@
             transition: var(--transition);
         }
 
-        input[type="text"]:focus, textarea:focus {
+        input[type="text"]:focus,
+        textarea:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px var(--primary-glow);
             background: rgba(15, 23, 42, 0.9);
@@ -257,7 +270,8 @@
             gap: 6px;
         }
 
-        .dropzone:hover, .dropzone.dragover {
+        .dropzone:hover,
+        .dropzone.dragover {
             border-color: var(--primary);
             background: rgba(59, 130, 246, 0.08);
         }
@@ -526,7 +540,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* COPY BUTTON */
@@ -575,8 +591,15 @@
         }
 
         @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .badge-status-0 {
@@ -598,323 +621,341 @@
         }
     </style>
 </head>
+
 <body>
 
-<div class="container">
-    <!-- HEADER -->
-    <header>
-        <div class="brand-block">
-            <div class="brand-logo">ET</div>
-            <div>
-                <div class="brand-title">
-                    PUESC e-TOLL & SENT Hub
-                    <span class="badge">PROD</span>
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="brand-block">
+                <div class="brand-logo">ET</div>
+                <div>
+                    <div class="brand-title">
+                        PUESC e-TOLL & SENT Hub
+                        <span class="badge">PROD</span>
+                    </div>
+                    <div class="brand-subtitle">Оператор ZSL-GRNC-0 (BY291080284) • ATK-GPS • Aleksandr</div>
                 </div>
-                <div class="brand-subtitle">Оператор ZSL-GRNC-0 (BY291080284) • ATK-GPS • Aleksandr</div>
+            </div>
+            <div class="server-status">
+                <div class="status-dot"></div>
+                <span>ws.puesc.gov.pl • Подключено</span>
+            </div>
+        </header>
+
+        <!-- MAIN INPUT & CONTROLS (GRID 2) -->
+        <div class="grid-2">
+            <!-- CARD 1: Ввод данных и Контрагент -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📝 1. Контрагент и Загрузка IMEI</div>
+                    <button class="btn btn-secondary btn-sm" onclick="pasteFromClipboard()">📋 Из буфера</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Наименование контрагента:</label>
+                    <input type="text" id="contractorInput" placeholder="Например: MotoGuard, Overseer"
+                        value="MotoGuard" oninput="updateDevicesInfoWithContractor()">
+                    <div class="chips-row">
+                        <span class="chip" onclick="setContractor('MotoGuard')">MotoGuard</span>
+                        <span class="chip" onclick="setContractor('Overseer')">Overseer</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Быстрая вставка списка IMEI (по одному на строку):</label>
+                    <textarea id="quickImeiTextarea" rows="3"
+                        placeholder="357544374994032&#10;357544375116882&#10;123456789"></textarea>
+                    <button class="btn btn-secondary btn-sm" style="margin-top: 6px;" onclick="importFromTextarea()">➕
+                        Добавить в таблицу</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Или перетащите файл (.txt / .csv):</label>
+                    <div class="dropzone" id="fileDropzone" onclick="document.getElementById('fileInput').click()">
+                        <div class="dropzone-icon">📁</div>
+                        <div class="dropzone-text">Нажмите для выбора файла или <strong>перетащите сюда</strong></div>
+                        <input type="file" id="fileInput" accept=".txt,.csv" style="display: none;"
+                            onchange="handleFileSelect(event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2: Массовое управление и Таблица -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        ⚙ 2. Выбор e-TOLL / SENT
+                        <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">(Устройств: <strong
+                                id="devicesCountBadge" style="color: var(--primary);">0</strong>)</span>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="addNewRow()">+ Добавить строку</button>
+                </div>
+
+                <!-- ПАНЕЛЬ МАССОВОГО ВЫБОРА ГАЛОК -->
+                <div class="batch-bar">
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Управление
+                        галками:</span>
+                    <div class="batch-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(true, true)">✅ Выбрать
+                            ВСЁ</button>
+                        <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(false, false)">❌ Снять
+                            ВСЁ</button>
+                        <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(true, false)">Только
+                            e-TOLL</button>
+                        <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(false, true)">Только
+                            SENT</button>
+                    </div>
+                </div>
+
+                <!-- ТАБЛИЦА УСТРОЙСТВ -->
+                <div class="table-container">
+                    <table id="devicesTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 36px; text-align: center;">#</th>
+                                <th style="width: 155px;">IMEI</th>
+                                <th>Доп. инфо</th>
+                                <th class="cell-center" style="width: 75px;">e-TOLL</th>
+                                <th class="cell-center" style="width: 75px;">SENT</th>
+                                <th class="cell-center" style="width: 40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="devicesTableBody">
+                            <!-- Строки генерируются динамически -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ПАНЕЛЬ ДЕЙСТВИЙ -->
+                <div class="actions-panel">
+                    <div class="main-cta-group">
+                        <button class="btn btn-primary" id="btnRegister" onclick="submitRegistration()">
+                            🚀 Зарегистрировать в PUESC
+                        </button>
+                        <button class="btn btn-danger" id="btnDelete" onclick="submitDeletion()">
+                            🗑 Удалить из PUESC
+                        </button>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="clearDevicesTable()">🧹 Очистить</button>
+                </div>
             </div>
         </div>
-        <div class="server-status">
-            <div class="status-dot"></div>
-            <span>ws.puesc.gov.pl • Подключено</span>
-        </div>
-    </header>
 
-    <!-- MAIN INPUT & CONTROLS (GRID 2) -->
-    <div class="grid-2">
-        <!-- CARD 1: Ввод данных и Контрагент -->
-        <div class="card">
+        <!-- PROGRESS BOX -->
+        <div class="progress-box" id="progressBox">
+            <div class="progress-text" id="progressText">
+                <div class="spinner"></div>
+                <span>Отправка документа в PUESC (SOAP AcceptDocument)...</span>
+            </div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- CARD 3: РЕЗУЛЬТАТЫ И ВЫГРУЗКА -->
+        <div class="card" id="resultsCard" style="display: none;">
             <div class="card-header">
-                <div class="card-title">📝 1. Контрагент и Загрузка IMEI</div>
-                <button class="btn btn-secondary btn-sm" onclick="pasteFromClipboard()">📋 Из буфера</button>
+                <div class="card-title">📊 3. Результаты обработки в PUESC</div>
+                <div id="sysRefBadge" style="font-size: 12px; color: var(--text-muted);"></div>
             </div>
 
-            <div class="form-group">
-                <label>Наименование контрагента:</label>
-                <input type="text" id="contractorInput" placeholder="Например: MotoGuard, Overseer" value="MotoGuard" oninput="updateDevicesInfoWithContractor()">
-                <div class="chips-row">
-                    <span class="chip" onclick="setContractor('MotoGuard')">MotoGuard</span>
-                    <span class="chip" onclick="setContractor('Overseer')">Overseer</span>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Всего устройств</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--accent-green);" id="statSuccess">0</div>
+                    <div class="stat-label">Успешно получено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--primary);" id="statExisting">0</div>
+                    <div class="stat-label">Ранее в базе</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--accent-red);" id="statErrors">0</div>
+                    <div class="stat-label">Ошибки</div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Быстрая вставка списка IMEI (по одному на строку):</label>
-                <textarea id="quickImeiTextarea" rows="3" placeholder="357544374994032&#10;357544375116882&#10;123456789"></textarea>
-                <button class="btn btn-secondary btn-sm" style="margin-top: 6px;" onclick="importFromTextarea()">➕ Добавить в таблицу</button>
-            </div>
-
-            <div class="form-group">
-                <label>Или перетащите файл (.txt / .csv):</label>
-                <div class="dropzone" id="fileDropzone" onclick="document.getElementById('fileInput').click()">
-                    <div class="dropzone-icon">📁</div>
-                    <div class="dropzone-text">Нажмите для выбора файла или <strong>перетащите сюда</strong></div>
-                    <input type="file" id="fileInput" accept=".txt,.csv" style="display: none;" onchange="handleFileSelect(event)">
-                </div>
-            </div>
-        </div>
-
-        <!-- CARD 2: Массовое управление и Таблица -->
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">
-                    ⚙ 2. Выбор e-TOLL / SENT
-                    <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">(Устройств: <strong id="devicesCountBadge" style="color: var(--primary);">0</strong>)</span>
-                </div>
-                <button class="btn btn-secondary btn-sm" onclick="addNewRow()">+ Добавить строку</button>
-            </div>
-
-            <!-- ПАНЕЛЬ МАССОВОГО ВЫБОРА ГАЛОК -->
-            <div class="batch-bar">
-                <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Управление галками:</span>
-                <div class="batch-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(true, true)">✅ Выбрать ВСЁ</button>
-                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(false, false)">❌ Снять ВСЁ</button>
-                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(true, false)">Только e-TOLL</button>
-                    <button class="btn btn-secondary btn-sm" onclick="setAllCheckboxes(false, true)">Только SENT</button>
-                </div>
-            </div>
-
-            <!-- ТАБЛИЦА УСТРОЙСТВ -->
+            <!-- ТАБЛИЦА РЕЗУЛЬТАТОВ -->
             <div class="table-container">
-                <table id="devicesTable">
+                <table id="resultsTable">
                     <thead>
                         <tr>
-                            <th style="width: 36px; text-align: center;">#</th>
-                            <th style="width: 155px;">IMEI</th>
-                            <th>Доп. инфо</th>
-                            <th class="cell-center" style="width: 75px;">e-TOLL</th>
-                            <th class="cell-center" style="width: 75px;">SENT</th>
-                            <th class="cell-center" style="width: 40px;"></th>
+                            <th style="width: 150px;">IMEI</th>
+                            <th style="width: 150px;">Номер локатора (ID)</th>
+                            <th style="width: 90px;">PIN-код</th>
+                            <th style="width: 90px;">Статус</th>
+                            <th style="width: 190px;">Группа Flespi</th>
+                            <th>Дата / Примечание</th>
                         </tr>
                     </thead>
-                    <tbody id="devicesTableBody">
-                        <!-- Строки генерируются динамически -->
+                    <tbody id="resultsTableBody">
                     </tbody>
                 </table>
             </div>
 
-            <!-- ПАНЕЛЬ ДЕЙСТВИЙ -->
-            <div class="actions-panel">
-                <div class="main-cta-group">
-                    <button class="btn btn-primary" id="btnRegister" onclick="submitRegistration()">
-                        🚀 Зарегистрировать в PUESC
-                    </button>
-                    <button class="btn btn-danger" id="btnDelete" onclick="submitDeletion()">
-                        🗑 Удалить из PUESC
-                    </button>
+            <!-- КНОПКИ СКАЧИВАНИЯ ОТЧЕТОВ -->
+            <div class="downloads-bar" id="downloadsBar">
+                <!-- Кнопки генерируются динамически -->
+            </div>
+        </div>
+
+        <!-- CARD 4: АКТИВНОСТЬ MOTOGUARD ВО FLESPI -->
+        <div class="card" id="motoguardActivityCard">
+            <div class="card-header">
+                <div class="card-title">
+                    📡 Выгрузка активности MotoGuard (Flespi)
+                    <span class="badge"
+                        style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); font-size: 11px;">motoguard_convert.py</span>
                 </div>
-                <button class="btn btn-secondary btn-sm" onclick="clearDevicesTable()">🧹 Очистить</button>
+                <button class="btn btn-primary btn-sm" id="btnFetchMotoguard" onclick="fetchMotoguardActivity()">
+                    ⚡ Запросить активность из Flespi
+                </button>
             </div>
-        </div>
-    </div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Выполняет запрос во Flespi (<code style="color: #a78bfa;">{name~"*motoguard*"}</code>), извлекает <code
+                    style="color: #a78bfa;">name</code> и <code style="color: #a78bfa;">last_active</code>, конвертирует
+                timestamp в читаемую UTC дату (или <em>Nigdy</em>) и формирует готовые файлы для скачивания.
+            </div>
 
-    <!-- PROGRESS BOX -->
-    <div class="progress-box" id="progressBox">
-        <div class="progress-text" id="progressText">
-            <div class="spinner"></div>
-            <span>Отправка документа в PUESC (SOAP AcceptDocument)...</span>
-        </div>
-        <div class="progress-bar-wrap">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-    </div>
+            <!-- СТАТИСТИКА MOTOGUARD -->
+            <div class="stats-grid" id="motoStatsGrid" style="display: none; margin-bottom: 14px;">
+                <div class="stat-card">
+                    <div class="stat-value" id="motoStatTotal">0</div>
+                    <div class="stat-label">Всего устройств</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--accent-green);" id="motoStatActive">0</div>
+                    <div class="stat-label">Были активны</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--text-muted);" id="motoStatNever">0</div>
+                    <div class="stat-label">Никогда (Nigdy)</div>
+                </div>
+            </div>
 
-    <!-- CARD 3: РЕЗУЛЬТАТЫ И ВЫГРУЗКА -->
-    <div class="card" id="resultsCard" style="display: none;">
-        <div class="card-header">
-            <div class="card-title">📊 3. Результаты обработки в PUESC</div>
-            <div id="sysRefBadge" style="font-size: 12px; color: var(--text-muted);"></div>
-        </div>
+            <!-- КНОПКИ СКАЧИВАНИЯ MOTOGUARD -->
+            <div class="downloads-bar" id="motoDownloadsBar" style="display: none; margin-bottom: 14px;">
+            </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="statTotal">0</div>
-                <div class="stat-label">Всего устройств</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--accent-green);" id="statSuccess">0</div>
-                <div class="stat-label">Успешно получено</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--primary);" id="statExisting">0</div>
-                <div class="stat-label">Ранее в базе</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--accent-red);" id="statErrors">0</div>
-                <div class="stat-label">Ошибки</div>
-            </div>
-        </div>
-
-        <!-- ТАБЛИЦА РЕЗУЛЬТАТОВ -->
-        <div class="table-container">
-            <table id="resultsTable">
-                <thead>
-                    <tr>
-                        <th style="width: 150px;">IMEI</th>
-                        <th style="width: 150px;">Номер локатора (ID)</th>
-                        <th style="width: 90px;">PIN-код</th>
-                        <th style="width: 90px;">Статус</th>
-                        <th style="width: 190px;">Группа Flespi</th>
-                        <th>Дата / Примечание</th>
-                    </tr>
-                </thead>
-                <tbody id="resultsTableBody">
-                </tbody>
-            </table>
-        </div>
-
-        <!-- КНОПКИ СКАЧИВАНИЯ ОТЧЕТОВ -->
-        <div class="downloads-bar" id="downloadsBar">
-            <!-- Кнопки генерируются динамически -->
-        </div>
-    </div>
-
-    <!-- CARD 4: АКТИВНОСТЬ MOTOGUARD ВО FLESPI -->
-    <div class="card" id="motoguardActivityCard">
-        <div class="card-header">
-            <div class="card-title">
-                📡 Выгрузка активности MotoGuard (Flespi)
-                <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); font-size: 11px;">motoguard_convert.py</span>
-            </div>
-            <button class="btn btn-primary btn-sm" id="btnFetchMotoguard" onclick="fetchMotoguardActivity()">
-                ⚡ Запросить активность из Flespi
-            </button>
-        </div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-            Выполняет запрос во Flespi (<code style="color: #a78bfa;">{name~"*motoguard*"}</code>), извлекает <code style="color: #a78bfa;">name</code> и <code style="color: #a78bfa;">last_active</code>, конвертирует timestamp в читаемую UTC дату (или <em>Nigdy</em>) и формирует готовые файлы для скачивания.
-        </div>
-
-        <!-- СТАТИСТИКА MOTOGUARD -->
-        <div class="stats-grid" id="motoStatsGrid" style="display: none; margin-bottom: 14px;">
-            <div class="stat-card">
-                <div class="stat-value" id="motoStatTotal">0</div>
-                <div class="stat-label">Всего устройств</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--accent-green);" id="motoStatActive">0</div>
-                <div class="stat-label">Были активны</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--text-muted);" id="motoStatNever">0</div>
-                <div class="stat-label">Никогда (Nigdy)</div>
+            <!-- ПОИСК И ПРЕВЬЮ ТАБЛИЦА -->
+            <div id="motoTableWrapper" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <input type="text" id="motoSearchInput" placeholder="🔍 Быстрый поиск по названию или IMEI..."
+                        style="max-width: 350px; padding: 6px 12px; font-size: 13px;" oninput="filterMotoTable()">
+                    <div id="motoFilteredCount" style="font-size: 12px; color: var(--text-dim);"></div>
+                </div>
+                <div class="table-container" style="max-height: 280px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="cell-center">#</th>
+                                <th>Название устройства (Name)</th>
+                                <th style="width: 220px;">Последняя активность (UTC)</th>
+                                <th style="width: 140px;" class="cell-center">Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody id="motoTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- КНОПКИ СКАЧИВАНИЯ MOTOGUARD -->
-        <div class="downloads-bar" id="motoDownloadsBar" style="display: none; margin-bottom: 14px;">
-        </div>
-
-        <!-- ПОИСК И ПРЕВЬЮ ТАБЛИЦА -->
-        <div id="motoTableWrapper" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <input type="text" id="motoSearchInput" placeholder="🔍 Быстрый поиск по названию или IMEI..." style="max-width: 350px; padding: 6px 12px; font-size: 13px;" oninput="filterMotoTable()">
-                <div id="motoFilteredCount" style="font-size: 12px; color: var(--text-dim);"></div>
+        <!-- CARD 5: ИСТОРИЯ ВЫГРУЗОК -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📂 История созданных отчетов</div>
+                <button class="btn btn-secondary btn-sm" onclick="loadHistory()">🔄 Обновить</button>
             </div>
-            <div class="table-container" style="max-height: 280px;">
+            <div class="table-container" style="max-height: 200px;">
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 50px;" class="cell-center">#</th>
-                            <th>Название устройства (Name)</th>
-                            <th style="width: 220px;">Последняя активность (UTC)</th>
-                            <th style="width: 140px;" class="cell-center">Статус</th>
+                            <th>Имя файла</th>
+                            <th style="width: 120px;">Размер</th>
+                            <th style="width: 180px;">Дата изменения</th>
+                            <th class="cell-center" style="width: 110px;">Скачать</th>
                         </tr>
                     </thead>
-                    <tbody id="motoTableBody">
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-dim);">Загрузка истории...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- CARD 5: ИСТОРИЯ ВЫГРУЗОК -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">📂 История созданных отчетов</div>
-            <button class="btn btn-secondary btn-sm" onclick="loadHistory()">🔄 Обновить</button>
-        </div>
-        <div class="table-container" style="max-height: 200px;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Имя файла</th>
-                        <th style="width: 120px;">Размер</th>
-                        <th style="width: 180px;">Дата изменения</th>
-                        <th class="cell-center" style="width: 110px;">Скачать</th>
-                    </tr>
-                </thead>
-                <tbody id="historyTableBody">
-                    <tr><td colspan="4" style="text-align: center; color: var(--text-dim);">Загрузка истории...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+    <!-- TOAST УВЕДОМЛЕНИЯ -->
+    <div class="toast" id="toast"></div>
 
-<!-- TOAST УВЕДОМЛЕНИЯ -->
-<div class="toast" id="toast"></div>
+    <script>
+        let devices = [];
 
-<script>
-    let devices = [];
-
-    window.addEventListener('DOMContentLoaded', () => {
-        setupDropzone();
-        loadHistory();
-    });
-
-    function showToast(message, isError = false) {
-        const toast = document.getElementById('toast');
-        toast.innerText = message;
-        toast.style.borderLeftColor = isError ? 'var(--accent-red)' : 'var(--primary)';
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 3500);
-    }
-
-    function setContractor(name) {
-        document.getElementById('contractorInput').value = name;
-        updateDevicesInfoWithContractor();
-    }
-
-    function updateDevicesInfoWithContractor() {
-        const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
-        devices.forEach(d => {
-            if (!d.customInfo) {
-                d.info = `${contractor} ${d.imei}`;
-            }
+        window.addEventListener('DOMContentLoaded', () => {
+            setupDropzone();
+            addImeisToList(['', '']);
+            loadHistory();
         });
-        renderDevicesTable();
-    }
 
-    function addImeisToList(imeiArray) {
-        const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
-        imeiArray.forEach(rawImei => {
-            const imei = String(rawImei).trim().split(';')[0].trim();
-            if (imei && !devices.some(d => d.imei === imei)) {
-                devices.push({
-                    imei: imei,
-                    info: `${contractor} ${imei}`,
-                    customInfo: false,
-                    etoll: true,
-                    sent: true,
-                });
-            }
-        });
-        renderDevicesTable();
-    }
-
-    function renderDevicesTable() {
-        const tbody = document.getElementById('devicesTableBody');
-        tbody.innerHTML = '';
-        document.getElementById('devicesCountBadge').innerText = devices.length;
-
-        if (devices.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Таблица пуста. Вставьте IMEI или перетащите файл.</td></tr>`;
-            return;
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.borderLeftColor = isError ? 'var(--accent-red)' : 'var(--primary)';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
         }
 
-        devices.forEach((d, idx) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
+        function setContractor(name) {
+            document.getElementById('contractorInput').value = name;
+            updateDevicesInfoWithContractor();
+        }
+
+        function updateDevicesInfoWithContractor() {
+            const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+            devices.forEach(d => {
+                if (!d.customInfo) {
+                    d.info = `${contractor} ${d.imei}`;
+                }
+            });
+            renderDevicesTable();
+        }
+
+        function addImeisToList(imeiArray) {
+            const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+            imeiArray.forEach(rawImei => {
+                const imei = String(rawImei).trim().split(';')[0].trim();
+                if (imei && !devices.some(d => d.imei === imei)) {
+                    devices.push({
+                        imei: imei,
+                        info: `${contractor} ${imei}`,
+                        customInfo: false,
+                        etoll: true,
+                        sent: true,
+                    });
+                }
+            });
+            renderDevicesTable();
+        }
+
+        function renderDevicesTable() {
+            const tbody = document.getElementById('devicesTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('devicesCountBadge').innerText = devices.length;
+
+            if (devices.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Таблица пуста. Вставьте IMEI или перетащите файл.</td></tr>`;
+                return;
+            }
+
+            devices.forEach((d, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
                 <td class="cell-center" style="color: var(--text-dim); font-size: 11px;">${idx + 1}</td>
                 <td>
                     <input type="text" value="${d.imei}" style="padding: 6px 8px; font-size: 13px;" onchange="updateRowImei(${idx}, this.value)">
@@ -932,280 +973,280 @@
                     <button class="btn-remove-row" onclick="removeRow(${idx})" title="Удалить строку">×</button>
                 </td>
             `;
-            tbody.appendChild(tr);
-        });
-    }
+                tbody.appendChild(tr);
+            });
+        }
 
-    function updateRowImei(idx, val) {
-        devices[idx].imei = val.trim();
-        if (!devices[idx].customInfo) {
-            const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
-            devices[idx].info = `${contractor} ${devices[idx].imei}`;
+        function updateRowImei(idx, val) {
+            devices[idx].imei = val.trim();
+            if (!devices[idx].customInfo) {
+                const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+                devices[idx].info = `${contractor} ${devices[idx].imei}`;
+                renderDevicesTable();
+            }
+        }
+
+        function updateRowInfo(idx, val) {
+            devices[idx].info = val.trim();
+            devices[idx].customInfo = true;
+        }
+
+        function toggleRowCheckbox(idx, field, checked) {
+            devices[idx][field] = checked;
+        }
+
+        function removeRow(idx) {
+            devices.splice(idx, 1);
             renderDevicesTable();
         }
-    }
 
-    function updateRowInfo(idx, val) {
-        devices[idx].info = val.trim();
-        devices[idx].customInfo = true;
-    }
-
-    function toggleRowCheckbox(idx, field, checked) {
-        devices[idx][field] = checked;
-    }
-
-    function removeRow(idx) {
-        devices.splice(idx, 1);
-        renderDevicesTable();
-    }
-
-    function addNewRow() {
-        const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
-        devices.push({
-            imei: '',
-            info: `${contractor}`,
-            customInfo: false,
-            etoll: true,
-            sent: true,
-        });
-        renderDevicesTable();
-    }
-
-    function clearDevicesTable() {
-        devices = [];
-        renderDevicesTable();
-    }
-
-    function setAllCheckboxes(etollVal, sentVal) {
-        devices.forEach(d => {
-            d.etoll = etollVal;
-            d.sent = sentVal;
-        });
-        renderDevicesTable();
-        showToast(`Галки обновлены: e-TOLL (${etollVal ? 'ВКЛ' : 'ВЫКЛ'}), SENT (${sentVal ? 'ВКЛ' : 'ВЫКЛ'})`);
-    }
-
-    function importFromTextarea() {
-        const text = document.getElementById('quickImeiTextarea').value;
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-        if (lines.length === 0) {
-            showToast('Поле ввода пусто!', true);
-            return;
+        function addNewRow() {
+            const contractor = document.getElementById('contractorInput').value.trim() || 'Device';
+            devices.push({
+                imei: '',
+                info: `${contractor}`,
+                customInfo: false,
+                etoll: true,
+                sent: true,
+            });
+            renderDevicesTable();
         }
-        addImeisToList(lines);
-        document.getElementById('quickImeiTextarea').value = '';
-        showToast(`Добавлено ${lines.length} устройств в таблицу!`);
-    }
 
-    async function pasteFromClipboard() {
-        try {
-            const text = await navigator.clipboard.readText();
+        function clearDevicesTable() {
+            devices = [];
+            renderDevicesTable();
+        }
+
+        function setAllCheckboxes(etollVal, sentVal) {
+            devices.forEach(d => {
+                d.etoll = etollVal;
+                d.sent = sentVal;
+            });
+            renderDevicesTable();
+            showToast(`Галки обновлены: e-TOLL (${etollVal ? 'ВКЛ' : 'ВЫКЛ'}), SENT (${sentVal ? 'ВКЛ' : 'ВЫКЛ'})`);
+        }
+
+        function importFromTextarea() {
+            const text = document.getElementById('quickImeiTextarea').value;
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            if (lines.length > 0) {
-                addImeisToList(lines);
-                showToast(`Вставлено ${lines.length} IMEI из буфера!`);
-            } else {
-                showToast('Буфер обмена пуст', true);
+            if (lines.length === 0) {
+                showToast('Поле ввода пусто!', true);
+                return;
             }
-        } catch (e) {
-            showToast('Не удалось прочитать буфер обмена. Вставьте вручную в поле ввода.', true);
+            addImeisToList(lines);
+            document.getElementById('quickImeiTextarea').value = '';
+            showToast(`Добавлено ${lines.length} устройств в таблицу!`);
         }
-    }
 
-    function setupDropzone() {
-        const dropzone = document.getElementById('fileDropzone');
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                dropzone.classList.add('dragover');
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+                if (lines.length > 0) {
+                    addImeisToList(lines);
+                    showToast(`Вставлено ${lines.length} IMEI из буфера!`);
+                } else {
+                    showToast('Буфер обмена пуст', true);
+                }
+            } catch (e) {
+                showToast('Не удалось прочитать буфер обмена. Вставьте вручную в поле ввода.', true);
+            }
+        }
+
+        function setupDropzone() {
+            const dropzone = document.getElementById('fileDropzone');
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add('dragover');
+                });
             });
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                dropzone.classList.remove('dragover');
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('dragover');
+                });
             });
-        });
-        dropzone.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
+            dropzone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    readFile(files[0]);
+                }
+            });
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
             if (files.length > 0) {
                 readFile(files[0]);
             }
-        });
-    }
-
-    function handleFileSelect(event) {
-        const files = event.target.files;
-        if (files.length > 0) {
-            readFile(files[0]);
-        }
-    }
-
-    function readFile(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target.result;
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            addImeisToList(lines);
-            showToast(`Файл "${file.name}" загружен (${lines.length} записей)!`);
-        };
-        reader.readAsText(file);
-    }
-
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast(`Скопировано: ${text}`);
-        });
-    }
-
-    // ОТПРАВКА НА РЕГИСТРАЦИЮ
-    async function submitRegistration() {
-        if (devices.length === 0) {
-            showToast('Таблица пуста. Добавьте хотя бы один IMEI!', true);
-            return;
         }
 
-        const contractor = document.getElementById('contractorInput').value.trim() || 'MotoGuard';
-        const payload = {
-            contractor: contractor,
-            devices: devices.map(d => ({
-                imei: d.imei,
-                info: d.info,
-                etoll: d.etoll,
-                sent: d.sent,
-            }))
-        };
+        function readFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+                addImeisToList(lines);
+                showToast(`Файл "${file.name}" загружен (${lines.length} записей)!`);
+            };
+            reader.readAsText(file);
+        }
 
-        const progressBox = document.getElementById('progressBox');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-        const btnRegister = document.getElementById('btnRegister');
-
-        progressBox.style.display = 'flex';
-        progressBar.style.width = '30%';
-        progressText.innerHTML = '<div class="spinner"></div><span>[1/3] Формирование XML и отправка в PUESC...</span>';
-        btnRegister.disabled = true;
-
-        try {
-            progressBar.style.width = '60%';
-            progressText.innerHTML = '<div class="spinner"></div><span>[2/3] Документ принят. Регистрация в PUESC и синхронизация групп Flespi...</span>';
-
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`Скопировано: ${text}`);
             });
+        }
 
-            const data = await response.json();
-            progressBar.style.width = '100%';
+        // ОТПРАВКА НА РЕГИСТРАЦИЮ
+        async function submitRegistration() {
+            if (devices.length === 0) {
+                showToast('Таблица пуста. Добавьте хотя бы один IMEI!', true);
+                return;
+            }
 
-            if (!data.success) {
+            const contractor = document.getElementById('contractorInput').value.trim() || 'MotoGuard';
+            const payload = {
+                contractor: contractor,
+                devices: devices.map(d => ({
+                    imei: d.imei,
+                    info: d.info,
+                    etoll: d.etoll,
+                    sent: d.sent,
+                }))
+            };
+
+            const progressBox = document.getElementById('progressBox');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const btnRegister = document.getElementById('btnRegister');
+
+            progressBox.style.display = 'flex';
+            progressBar.style.width = '30%';
+            progressText.innerHTML = '<div class="spinner"></div><span>[1/3] Формирование XML и отправка в PUESC...</span>';
+            btnRegister.disabled = true;
+
+            try {
+                progressBar.style.width = '60%';
+                progressText.innerHTML = '<div class="spinner"></div><span>[2/3] Документ принят. Регистрация в PUESC и синхронизация групп Flespi...</span>';
+
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                progressBar.style.width = '100%';
+
+                if (!data.success) {
+                    progressBox.style.display = 'none';
+                    showToast(`Ошибка: ${data.error}`, true);
+                    btnRegister.disabled = false;
+                    return;
+                }
+
+                progressText.innerHTML = '<span>✅ Готово! Результаты получены и группы Flespi обновлены.</span>';
+                setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
+                renderResults(data);
+                loadHistory();
+                showToast('Регистрация и синхронизация с Flespi выполнены!');
+            } catch (err) {
                 progressBox.style.display = 'none';
-                showToast(`Ошибка: ${data.error}`, true);
+                showToast(`Сетевая ошибка: ${err.message}`, true);
+            } finally {
                 btnRegister.disabled = false;
+            }
+        }
+
+        // ОТПРАВКА НА УДАЛЕНИЕ
+        async function submitDeletion() {
+            if (devices.length === 0) {
+                showToast('Таблица пуста. Добавьте хотя бы один IMEI!', true);
                 return;
             }
 
-            progressText.innerHTML = '<span>✅ Готово! Результаты получены и группы Flespi обновлены.</span>';
-            setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
-            renderResults(data);
-            loadHistory();
-            showToast('Регистрация и синхронизация с Flespi выполнены!');
-        } catch (err) {
-            progressBox.style.display = 'none';
-            showToast(`Сетевая ошибка: ${err.message}`, true);
-        } finally {
-            btnRegister.disabled = false;
-        }
-    }
+            if (!confirm(`Вы действительно хотите удалить ${devices.length} устройств из PUESC?`)) {
+                return;
+            }
 
-    // ОТПРАВКА НА УДАЛЕНИЕ
-    async function submitDeletion() {
-        if (devices.length === 0) {
-            showToast('Таблица пуста. Добавьте хотя бы один IMEI!', true);
-            return;
-        }
+            const imeis = devices.map(d => d.imei).filter(Boolean);
+            const progressBox = document.getElementById('progressBox');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
 
-        if (!confirm(`Вы действительно хотите удалить ${devices.length} устройств из PUESC?`)) {
-            return;
-        }
+            progressBox.style.display = 'flex';
+            progressBar.style.width = '40%';
+            progressText.innerHTML = '<div class="spinner"></div><span>Отправка запроса на удаление в PUESC...</span>';
 
-        const imeis = devices.map(d => d.imei).filter(Boolean);
-        const progressBox = document.getElementById('progressBox');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
+            try {
+                const response = await fetch('/api/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imeis: imeis })
+                });
+                const data = await response.json();
+                progressBar.style.width = '100%';
 
-        progressBox.style.display = 'flex';
-        progressBar.style.width = '40%';
-        progressText.innerHTML = '<div class="spinner"></div><span>Отправка запроса на удаление в PUESC...</span>';
+                if (!data.success) {
+                    progressBox.style.display = 'none';
+                    showToast(`Ошибка: ${data.error}`, true);
+                    return;
+                }
 
-        try {
-            const response = await fetch('/api/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imeis: imeis })
-            });
-            const data = await response.json();
-            progressBar.style.width = '100%';
-
-            if (!data.success) {
+                setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
+                renderDeletionResults(data);
+                loadHistory();
+                showToast('Запрос на удаление выполнен!');
+            } catch (err) {
                 progressBox.style.display = 'none';
-                showToast(`Ошибка: ${data.error}`, true);
-                return;
+                showToast(`Сетевая ошибка: ${err.message}`, true);
             }
-
-            setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
-            renderDeletionResults(data);
-            loadHistory();
-            showToast('Запрос на удаление выполнен!');
-        } catch (err) {
-            progressBox.style.display = 'none';
-            showToast(`Сетевая ошибка: ${err.message}`, true);
         }
-    }
 
-    function renderResults(data) {
-        const resultsCard = document.getElementById('resultsCard');
-        resultsCard.style.display = 'flex';
+        function renderResults(data) {
+            const resultsCard = document.getElementById('resultsCard');
+            resultsCard.style.display = 'flex';
 
-        document.getElementById('sysRefBadge').innerText = data.sysRef ? `sysRef: ${data.sysRef}` : '';
+            document.getElementById('sysRefBadge').innerText = data.sysRef ? `sysRef: ${data.sysRef}` : '';
 
-        const results = data.results || [];
-        const successCount = results.filter(r => r.success && !r.is_existing).length;
-        const existingCount = results.filter(r => r.is_existing).length;
-        const errorCount = results.filter(r => !r.success).length;
+            const results = data.results || [];
+            const successCount = results.filter(r => r.success && !r.is_existing).length;
+            const existingCount = results.filter(r => r.is_existing).length;
+            const errorCount = results.filter(r => !r.success).length;
 
-        document.getElementById('statTotal').innerText = results.length;
-        document.getElementById('statSuccess').innerText = successCount;
-        document.getElementById('statExisting').innerText = existingCount;
-        document.getElementById('statErrors').innerText = errorCount;
+            document.getElementById('statTotal').innerText = results.length;
+            document.getElementById('statSuccess').innerText = successCount;
+            document.getElementById('statExisting').innerText = existingCount;
+            document.getElementById('statErrors').innerText = errorCount;
 
-        const tbody = document.getElementById('resultsTableBody');
-        tbody.innerHTML = '';
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
 
-        results.forEach(r => {
-            const tr = document.createElement('tr');
-            const noteHtml = r.is_existing 
-                ? `<span style="color: #60a5fa; font-weight: 500;">🔵 Ранее в базе (ID и PIN сохранены)</span>`
-                : (r.success ? `<span style="color: #34d399; font-weight: 500;">🟢 Новая регистрация</span>` : `<span style="color: #f87171; font-weight: 500;">❌ ${r.error || 'Отклонено PUESC'}</span>`);
+            results.forEach(r => {
+                const tr = document.createElement('tr');
+                const noteHtml = r.is_existing
+                    ? `<span style="color: #60a5fa; font-weight: 500;">🔵 Ранее в базе (ID и PIN сохранены)</span>`
+                    : (r.success ? `<span style="color: #34d399; font-weight: 500;">🟢 Новая регистрация</span>` : `<span style="color: #f87171; font-weight: 500;">❌ ${r.error || 'Отклонено PUESC'}</span>`);
 
-            const statusHtml = r.success
-                ? `<span class="badge-status-0">0 Активен</span>`
-                : `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Ошибка</span>`;
+                const statusHtml = r.success
+                    ? `<span class="badge-status-0">0 Активен</span>`
+                    : `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Ошибка</span>`;
 
-            const flespiHtml = (r.flespi_synced && r.flespi_group) 
-                ? `<span style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">📁 ${r.flespi_group}</span>`
-                : `<span style="color: var(--text-dim);">-</span>`;
+                const flespiHtml = (r.flespi_synced && r.flespi_group)
+                    ? `<span style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">📁 ${r.flespi_group}</span>`
+                    : `<span style="color: var(--text-dim);">-</span>`;
 
-            const locNumHtml = (r.locNum && r.locNum !== '-')
-                ? `<span>${r.locNum}</span> <button class="copy-btn" onclick="copyToClipboard('${r.locNum}')" title="Скопировать">📋</button>`
-                : `<span style="color: var(--text-dim);">-</span>`;
+                const locNumHtml = (r.locNum && r.locNum !== '-')
+                    ? `<span>${r.locNum}</span> <button class="copy-btn" onclick="copyToClipboard('${r.locNum}')" title="Скопировать">📋</button>`
+                    : `<span style="color: var(--text-dim);">-</span>`;
 
-            const locPinHtml = (r.locPin && r.locPin !== '-')
-                ? `<span style="font-family: monospace; font-weight: 600; color: #f59e0b;">${r.locPin}</span> <button class="copy-btn" onclick="copyToClipboard('${r.locPin}')" title="Скопировать">📋</button>`
-                : `<span style="color: var(--text-dim);">-</span>`;
+                const locPinHtml = (r.locPin && r.locPin !== '-')
+                    ? `<span style="font-family: monospace; font-weight: 600; color: #f59e0b;">${r.locPin}</span> <button class="copy-btn" onclick="copyToClipboard('${r.locPin}')" title="Скопировать">📋</button>`
+                    : `<span style="color: var(--text-dim);">-</span>`;
 
-            tr.innerHTML = `
+                tr.innerHTML = `
                 <td style="font-weight: 600; ${!r.success ? 'color: #f87171;' : ''}">${r.imei}</td>
                 <td>${locNumHtml}</td>
                 <td>${locPinHtml}</td>
@@ -1213,49 +1254,49 @@
                 <td>${flespiHtml}</td>
                 <td>${noteHtml}</td>
             `;
-            tbody.appendChild(tr);
-        });
+                tbody.appendChild(tr);
+            });
 
-        // КНОПКИ СКАЧИВАНИЯ
-        const downloadsBar = document.getElementById('downloadsBar');
-        downloadsBar.innerHTML = '';
-        if (data.files) {
-            if (data.files.txt) {
-                downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT отчет (${data.files.txt})</a>`;
-            }
-            if (data.files.csv) {
-                downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
-            }
-            if (data.files.xml) {
-                downloadsBar.innerHTML += `<a href="/api/download/${data.files.xml}" class="btn btn-secondary btn-sm" download>💾 Скачать XML запрос</a>`;
-            }
-            if (data.files.response_xml) {
-                downloadsBar.innerHTML += `<a href="/api/download/${data.files.response_xml}" class="btn btn-secondary btn-sm" download>📥 Скачать XML ответ</a>`;
+            // КНОПКИ СКАЧИВАНИЯ
+            const downloadsBar = document.getElementById('downloadsBar');
+            downloadsBar.innerHTML = '';
+            if (data.files) {
+                if (data.files.txt) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT отчет (${data.files.txt})</a>`;
+                }
+                if (data.files.csv) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+                }
+                if (data.files.xml) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.xml}" class="btn btn-secondary btn-sm" download>💾 Скачать XML запрос</a>`;
+                }
+                if (data.files.response_xml) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.response_xml}" class="btn btn-secondary btn-sm" download>📥 Скачать XML ответ</a>`;
+                }
             }
         }
-    }
 
-    function renderDeletionResults(data) {
-        const resultsCard = document.getElementById('resultsCard');
-        resultsCard.style.display = 'flex';
-        document.getElementById('sysRefBadge').innerText = data.sysRef ? `sysRef: ${data.sysRef}` : '';
+        function renderDeletionResults(data) {
+            const resultsCard = document.getElementById('resultsCard');
+            resultsCard.style.display = 'flex';
+            document.getElementById('sysRefBadge').innerText = data.sysRef ? `sysRef: ${data.sysRef}` : '';
 
-        const results = data.results || [];
-        document.getElementById('statTotal').innerText = results.length;
-        document.getElementById('statSuccess').innerText = results.length;
-        document.getElementById('statExisting').innerText = 0;
-        document.getElementById('statErrors').innerText = 0;
+            const results = data.results || [];
+            document.getElementById('statTotal').innerText = results.length;
+            document.getElementById('statSuccess').innerText = results.length;
+            document.getElementById('statExisting').innerText = 0;
+            document.getElementById('statErrors').innerText = 0;
 
-        const tbody = document.getElementById('resultsTableBody');
-        tbody.innerHTML = '';
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
 
-        results.forEach(r => {
-            const tr = document.createElement('tr');
-            const locHtml = (r.locNum && r.locNum !== '-')
-                ? `<span>${r.locNum}</span>`
-                : `<span style="color: var(--text-dim);">-</span>`;
+            results.forEach(r => {
+                const tr = document.createElement('tr');
+                const locHtml = (r.locNum && r.locNum !== '-')
+                    ? `<span>${r.locNum}</span>`
+                    : `<span style="color: var(--text-dim);">-</span>`;
 
-            tr.innerHTML = `
+                tr.innerHTML = `
                 <td style="font-weight: 600;">${r.imei}</td>
                 <td>${locHtml}</td>
                 <td style="color: var(--text-dim);">-</td>
@@ -1263,37 +1304,37 @@
                 <td><span style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">🗑 Удалено из Flespi</span></td>
                 <td><span style="color: #34d399; font-weight: 500;">${r.result}</span></td>
             `;
-            tbody.appendChild(tr);
-        });
+                tbody.appendChild(tr);
+            });
 
-        const downloadsBar = document.getElementById('downloadsBar');
-        downloadsBar.innerHTML = '';
-        if (data.files) {
-            if (data.files.txt) {
-                downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT отчет (${data.files.txt})</a>`;
-            }
-            if (data.files.csv) {
-                downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+            const downloadsBar = document.getElementById('downloadsBar');
+            downloadsBar.innerHTML = '';
+            if (data.files) {
+                if (data.files.txt) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT отчет (${data.files.txt})</a>`;
+                }
+                if (data.files.csv) {
+                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+                }
             }
         }
-    }
 
-    async function loadHistory() {
-        try {
-            const res = await fetch('/api/history');
-            const data = await res.json();
-            const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = '';
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const data = await res.json();
+                const tbody = document.getElementById('historyTableBody');
+                tbody.innerHTML = '';
 
-            if (!data.files || data.files.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">История отчетов пуста.</td></tr>`;
-                return;
-            }
+                if (!data.files || data.files.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">История отчетов пуста.</td></tr>`;
+                    return;
+                }
 
-            data.files.forEach(f => {
-                const tr = document.createElement('tr');
-                const sizeKb = (f.size / 1024).toFixed(1);
-                tr.innerHTML = `
+                data.files.forEach(f => {
+                    const tr = document.createElement('tr');
+                    const sizeKb = (f.size / 1024).toFixed(1);
+                    tr.innerHTML = `
                     <td style="font-weight: 500;">${f.name}</td>
                     <td style="color: var(--text-muted); font-size: 12px;">${sizeKb} KB</td>
                     <td style="color: var(--text-muted); font-size: 12px;">${f.mtime}</td>
@@ -1301,86 +1342,86 @@
                         <a href="/api/download/${f.name}" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;" download>📥 Скачать</a>
                     </td>
                 `;
-                tbody.appendChild(tr);
-            });
-        } catch (e) {
-            console.error('Failed to load history', e);
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error('Failed to load history', e);
+            }
         }
-    }
 
-    let motoguardDevicesList = [];
+        let motoguardDevicesList = [];
 
-    async function fetchMotoguardActivity() {
-        const btn = document.getElementById('btnFetchMotoguard');
-        const statsGrid = document.getElementById('motoStatsGrid');
-        const downloadsBar = document.getElementById('motoDownloadsBar');
-        const tableWrapper = document.getElementById('motoTableWrapper');
+        async function fetchMotoguardActivity() {
+            const btn = document.getElementById('btnFetchMotoguard');
+            const statsGrid = document.getElementById('motoStatsGrid');
+            const downloadsBar = document.getElementById('motoDownloadsBar');
+            const tableWrapper = document.getElementById('motoTableWrapper');
 
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Запрос данных из Flespi...';
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Запрос данных из Flespi...';
 
-        try {
-            const res = await fetch('/api/flespi/motoguard_activity');
-            const data = await res.json();
+            try {
+                const res = await fetch('/api/flespi/motoguard_activity');
+                const data = await res.json();
 
-            if (!data.success) {
-                showToast(`Ошибка запроса: ${data.error}`, true);
+                if (!data.success) {
+                    showToast(`Ошибка запроса: ${data.error}`, true);
+                    return;
+                }
+
+                motoguardDevicesList = data.devices || [];
+
+                document.getElementById('motoStatTotal').innerText = data.count;
+                document.getElementById('motoStatActive').innerText = data.active_count;
+                document.getElementById('motoStatNever').innerText = data.never_count;
+
+                statsGrid.style.display = 'grid';
+                tableWrapper.style.display = 'block';
+
+                // Downloads buttons
+                downloadsBar.innerHTML = '';
+                if (data.files) {
+                    if (data.files.json) {
+                        downloadsBar.innerHTML += `<a href="/api/download/${data.files.json}" class="btn btn-primary btn-sm" download>💾 Скачать JSON (${data.files.json})</a>`;
+                    }
+                    if (data.files.csv) {
+                        downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
+                    }
+                    if (data.files.txt) {
+                        downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT (${data.files.txt})</a>`;
+                    }
+                }
+                downloadsBar.style.display = 'flex';
+
+                renderMotoTable(motoguardDevicesList);
+                loadHistory();
+                showToast(`Успешно получено ${data.count} устройств MotoGuard из Flespi!`);
+            } catch (err) {
+                showToast(`Ошибка подключения: ${err.message}`, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '⚡ Запросить активность из Flespi';
+            }
+        }
+
+        function renderMotoTable(list) {
+            const tbody = document.getElementById('motoTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('motoFilteredCount').innerText = `Показано: ${list.length} из ${motoguardDevicesList.length}`;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 16px;">Устройства не найдены.</td></tr>`;
                 return;
             }
 
-            motoguardDevicesList = data.devices || [];
+            list.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                const isNever = item.last_active === 'Nigdy';
+                const statusBadge = isNever
+                    ? `<span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">⚪ Не активен</span>`
+                    : `<span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">🟢 Активен</span>`;
 
-            document.getElementById('motoStatTotal').innerText = data.count;
-            document.getElementById('motoStatActive').innerText = data.active_count;
-            document.getElementById('motoStatNever').innerText = data.never_count;
-
-            statsGrid.style.display = 'grid';
-            tableWrapper.style.display = 'block';
-
-            // Downloads buttons
-            downloadsBar.innerHTML = '';
-            if (data.files) {
-                if (data.files.json) {
-                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.json}" class="btn btn-primary btn-sm" download>💾 Скачать JSON (${data.files.json})</a>`;
-                }
-                if (data.files.csv) {
-                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.csv}" class="btn btn-secondary btn-sm" download>📊 Скачать CSV (${data.files.csv})</a>`;
-                }
-                if (data.files.txt) {
-                    downloadsBar.innerHTML += `<a href="/api/download/${data.files.txt}" class="btn btn-secondary btn-sm" download>📄 Скачать TXT (${data.files.txt})</a>`;
-                }
-            }
-            downloadsBar.style.display = 'flex';
-
-            renderMotoTable(motoguardDevicesList);
-            loadHistory();
-            showToast(`Успешно получено ${data.count} устройств MotoGuard из Flespi!`);
-        } catch (err) {
-            showToast(`Ошибка подключения: ${err.message}`, true);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '⚡ Запросить активность из Flespi';
-        }
-    }
-
-    function renderMotoTable(list) {
-        const tbody = document.getElementById('motoTableBody');
-        tbody.innerHTML = '';
-        document.getElementById('motoFilteredCount').innerText = `Показано: ${list.length} из ${motoguardDevicesList.length}`;
-
-        if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 16px;">Устройства не найдены.</td></tr>`;
-            return;
-        }
-
-        list.forEach((item, idx) => {
-            const tr = document.createElement('tr');
-            const isNever = item.last_active === 'Nigdy';
-            const statusBadge = isNever
-                ? `<span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">⚪ Не активен</span>`
-                : `<span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">🟢 Активен</span>`;
-
-            tr.innerHTML = `
+                tr.innerHTML = `
                 <td class="cell-center" style="color: var(--text-dim); font-size: 11px;">${idx + 1}</td>
                 <td style="font-weight: 600;">
                     ${item.name}
@@ -1391,23 +1432,24 @@
                 </td>
                 <td class="cell-center">${statusBadge}</td>
             `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function filterMotoTable() {
-        const query = document.getElementById('motoSearchInput').value.trim().toLowerCase();
-        if (!query) {
-            renderMotoTable(motoguardDevicesList);
-            return;
+                tbody.appendChild(tr);
+            });
         }
-        const filtered = motoguardDevicesList.filter(d => 
-            (d.name && d.name.toLowerCase().includes(query)) ||
-            (d.last_active && d.last_active.toLowerCase().includes(query))
-        );
-        renderMotoTable(filtered);
-    }
-</script>
+
+        function filterMotoTable() {
+            const query = document.getElementById('motoSearchInput').value.trim().toLowerCase();
+            if (!query) {
+                renderMotoTable(motoguardDevicesList);
+                return;
+            }
+            const filtered = motoguardDevicesList.filter(d =>
+                (d.name && d.name.toLowerCase().includes(query)) ||
+                (d.last_active && d.last_active.toLowerCase().includes(query))
+            );
+            renderMotoTable(filtered);
+        }
+    </script>
 
 </body>
+
 </html>
